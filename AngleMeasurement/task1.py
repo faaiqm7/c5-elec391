@@ -3,46 +3,79 @@ import serial
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-class AnimationPlot:
+class SerialPlot:
+    def __init__(self, COMPORTnum: int, baud: int, numDataPoints: int,
+                 Yauto: bool = True, Ymax: float = 100, Ymin: float = 0):
+        self.comport = COMPORTnum
+        self.baud = baud
+        self.numDataPoints = numDataPoints
+        self.Yauto = Yauto
+        self.Ymax = Ymax
+        self.Ymin = Ymin
 
-    def animate(self, i, dataList, ser):
-        ser.write(b'g')                                     # Transmit the char 'g' to receive the Arduino data point
-        arduinoData_string = ser.readline().decode('ascii') # Decode receive Arduino data as a formatted string
-        #print(i)                                           # 'i' is a incrementing variable based upon frames = x argument
+        self.datalist = []
+        self.fig = plt.figure()
+        self.ax = self.fig.add_subplot(111)
+        self.ser = serial.Serial(f"COM{self.comport}", self.baud) 
+        time.sleep(2)
+    
+    def _readSerial(self) -> float:
+        while True:
+            rawline = self.ser.readline().decode('ascii').strip() # Read and decode
+            if rawline:
+                try:
+                    # Parse the x, y, z values from comma-separated data
+                    data = rawline.split(',')
+                    x = float(data[0])  # Extract the x value
+                    print(f"x: {x}")  # Debug x value
+                    return x
+                except (ValueError, IndexError):
+                    print(f"Invalid data: {rawline}")  # Debug invalid data
+                    pass
 
-        try:
-            arduinoData_float = float(arduinoData_string)   # Convert to float
-            dataList.append(arduinoData_float)              # Add to the list holding the fixed number of points to animate
+    def _animate(self, *args):
+        self.ser.write(b'g')  # Optional: Trigger Arduino (not necessary here)
 
-        except:                                             # Pass if data point is bad                               
-            pass
+        # Read x value
+        readdata = self._readSerial()
+        self.datalist.append(readdata)
 
-        dataList = dataList[-50:]                           # Fix the list size so that the animation plot 'window' is x number of points
+        # Fix the list size to maintain the window of numDataPoints
+        self.datalist = self.datalist[-self.numDataPoints:]
         
-        ax.clear()                                          # Clear last data frame
-        
-        self.getPlotFormat()
-        ax.plot(dataList)                                   # Plot new data frame
-        
+        # Update the plot
+        self.ax.clear()  # Clear the previous frame
+        self._formatPlot()
+        self.ax.plot(self.datalist, label="x (deg/s)", color="r")
+        self.ax.legend()
 
-    def getPlotFormat(self):
-        ax.set_ylim([0, 1200])                              # Set Y axis limit of plot
-        ax.set_title("Arduino Data")                        # Set title of figure
-        ax.set_ylabel("Value")                              # Set title of y axis
+    def _formatPlot(self):
+        MARGIN = 1.1
+        if self.Yauto:
+            ymin = min(0, int(min(self.datalist)) * MARGIN)
+            ymax = int(max(self.datalist)) * MARGIN
+        else:
+            ymin = self.Ymin
+            ymax = self.Ymax
+        self.ax.set_ylim([ymin, ymax])  
+        self.ax.set_title("Arduino Gyroscope Data (x-axis)")  # Title
+        self.ax.set_ylabel("Angular Velocity (deg/s)")  # Y-axis label
 
-dataList = []                                           # Create empty list variable for later use
-                                                        
-fig = plt.figure()                                      # Create Matplotlib plots fig is the 'higher level' plot window
-ax = fig.add_subplot(111)                               # Add subplot to main fig window
+    def run(self):
+        ani = animation.FuncAnimation(self.fig, self._animate, frames=100, fargs=None, interval=100) 
+        plt.show()
 
-realTimePlot = AnimationPlot()
+    def __del__(self):
+        self.ser.close()
 
-ser = serial.Serial("COM3", 9600)                       # Establish Serial object with COM port and BAUD rate to match Arduino Port/rate
-time.sleep(2)                                           # Time delay for Arduino Serial initialization 
 
-                                                        # Matplotlib Animation Fuction that takes takes care of real time plot.
-                                                        # Note that 'fargs' parameter is where we pass in our dataList and Serial object. 
-ani = animation.FuncAnimation(fig, realTimePlot.animate, frames=100, fargs=(dataList, ser), interval=100) 
+if __name__ == "__main__":
+    liveplot = SerialPlot(
+        COMPORTnum=3,
+        baud=9600,
+        numDataPoints=70,
+        Yauto=True,
+        Ymax=30  # Adjust as needed for your data range
+    )
 
-plt.show()                                              # Keep Matplotlib plot persistent on screen until it is closed
-ser.close()            
+    liveplot.run()

@@ -1,29 +1,27 @@
 #include "Arduino_BMI270_BMM150.h"
 
 void setup() {
-    // put your setup code here, to run once:
-    IMU.begin();
-
+    Serial.begin(9600); // Initialize serial communication
+    while (!Serial);
+    
     if (!IMU.begin()) {
-    Serial.println("Failed to initialize IMU!");
+        Serial.println("Failed to initialize IMU!");
+        while (1);
     }
-
 }
 
 void loop() {
-  
-  float x, y, z;
+    float x, y, z;
 
-if (IMU.gyroscopeAvailable()) {
-    IMU.readGyroscope(x, y, z);
+    if (IMU.gyroscopeAvailable()) {
+        IMU.readGyroscope(x, y, z);
 
-    Serial.print(x);
-    Serial.print('\t');
-    Serial.print(y);
-    Serial.print('\t');
-    Serial.println(z);
-}
-
-
-
+        // Send x, y, z values as comma-separated
+        Serial.print(x, 2);
+        Serial.print(',');
+        Serial.print(y, 2);
+        Serial.print(',');
+        Serial.println(z, 2);
+    }
+    delay(100); // Adjust the delay for desired update rate
 }
