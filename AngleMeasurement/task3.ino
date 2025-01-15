@@ -3,7 +3,6 @@
 float Q0 = 0;
 float Q = 0;
 
-
 void setup() {
     Serial.begin(9600); // Initialize serial communication
     while (!Serial);
@@ -16,8 +15,6 @@ void setup() {
 
 void loop() {
     float x_0, y_0, z_0, x_new, y_new, z_new;
-
-    
 
     if (IMU.gyroscopeAvailable()) {
         IMU.readGyroscope(x_0, y_0, z_0);
@@ -37,7 +34,9 @@ void loop() {
         Q0 = x;
         Q = Q + x;
 
-        printf("%f\n", Q);
+        Serial.print(Q);
+        Serial.print('\n');
+        //Serial.print(Q);
         
     }
     delay(100); // Adjust the delay for desired update rate
