@@ -1,5 +1,6 @@
 #include "Arduino_BMI270_BMM150.h"
 
+float Q = 0;
 void setup() {
     Serial.begin(9600); // Initialize serial communication
     while (!Serial);
@@ -14,14 +15,16 @@ void loop() {
     float x, y, z;
 
     if (IMU.accelerationAvailable()) {
-        IMU.readAcceleration(x, y, z);
+        IMU.readAcceleration(ay, ax, az); //Axis for X and Y are flipped
+
+        Q = atan(ax/az);
 
         // Send x, y, z values as comma-separated
-        Serial.print(x, 2);
-        Serial.print(',');
-        Serial.print(y, 2);
-        Serial.print(',');
-        Serial.println(z, 2);
+        Serial.print(Q);
+        Serial.print('\n');
+        //Serial.print(',');
+        //Serial.print(y, 2);
+        //Serial.print(',');
+        //Serial.println(z, 2);
     }
-    delay(100); // Adjust the delay for desired update rate
 }

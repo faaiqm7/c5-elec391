@@ -26,20 +26,16 @@ void loop() {
         Serial.print(',');
         Serial.println(z_0, 2);*/
 
-        delay(10);
-
         float x;
 
-        x = Q0 + x_0 * 0.01;
+        x = Q0 + z_0 * 0.01;
         Q0 = x;
         Q = Q + x;
 
         Serial.print(Q);
         Serial.print('\n');
         //Serial.print(Q);
-        
     }
-    delay(100); // Adjust the delay for desired update rate
 }
 
 

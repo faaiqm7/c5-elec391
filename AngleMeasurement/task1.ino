@@ -23,5 +23,4 @@ void loop() {
         Serial.print(',');
         Serial.println(z, 2);
     }
-    delay(100); // Adjust the delay for desired update rate
 }
