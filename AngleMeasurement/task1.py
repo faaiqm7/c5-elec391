@@ -11,7 +11,7 @@ class GyroAxisPlotter:
         self.yLine, = self.ax.plot([], [], label="Y-axis", color="green")
         self.zLine, = self.ax.plot([], [], label="Z-axis", color="red")
         self.xText = self.ax.text(0.02, 0.95, "", transform=self.ax.transAxes, fontsize=10, verticalalignment='top')
-        self.yTest = self.ax.text(0.02, 0.90, "", transform=self.ax.transAxes, fontsize=10, verticalalignment='top')
+        self.yText = self.ax.text(0.02, 0.90, "", transform=self.ax.transAxes, fontsize=10, verticalalignment='top')
         self.zText = self.ax.text(0.02, 0.85, "", transform=self.ax.transAxes, fontsize=10, verticalalignment='top')
         self._setup_axes()
 
@@ -45,14 +45,14 @@ class GyroAxisPlotter:
             self.zLine.set_data(self.tData, self.zData)
 
             self.xText.set_text(f"X: {axData[0]:.2f} deg/s")
-            self.yTest.set_text(f"Y: {axData[1]:.2f} deg/s")
+            self.yText.set_text(f"Y: {axData[1]:.2f} deg/s")
             self.zText.set_text(f"Z: {axData[2]:.2f} deg/s")
 
             self.ax.set_xlim(max(0, len(self.tData) - 50), len(self.tData))
             self.ax.relim()
             self.ax.autoscale_view()
 
-        return self.xLine, self.yLine, self.zLine, self.xText, self.yTest, self.zText
+        return self.xLine, self.yLine, self.zLine, self.xText, self.yText, self.zText
 
     def run(self):
         ani = FuncAnimation(self.fig, self.update, interval=10)

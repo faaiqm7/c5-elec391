@@ -17,7 +17,7 @@ void loop() {
     if (IMU.accelerationAvailable()) {
         IMU.readAcceleration(ay, ax, az); //Axis for X and Y are flipped
 
-        Q = atan(ax/az);
+        Q = atan(ax/az) * 180 / 3.14159; // Calculate the angle in degrees
 
         // Send x, y, z values as comma-separated
         Serial.print(Q);

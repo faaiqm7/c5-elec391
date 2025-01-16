@@ -7,14 +7,15 @@ class AcceloremeterAnglePlotter:
         self.ser = serial.Serial(port, baud_rate, timeout=1)
         self.qData, self.tData = [], []
         self.fig, self.ax = plt.subplots(figsize=(10, 6))
-        self.qLine, = self.ax.plot([], [], label="Tilt Angle (Q)", color="purple")
+        self.qLine, = self.ax.plot([], [], label="Acc Angle)", color="purple")
         self.qText = self.ax.text(0.02, 0.95, "", transform=self.ax.transAxes, fontsize=10, verticalalignment='top')
         self._setup_axes()
 
     def _setup_axes(self):
-        self.ax.set_title("Tilt Angle (Q) over Time")
-        self.ax.set_xlabel("Time (frames)")
-        self.ax.set_ylabel("Angle (radians)")
+        self.ax.set_title("Accelorometer Angle vs Time")
+        self.ax.set_xlabel("Time (ms)")
+        self.ax.set_ylabel("Angle (deg)")
+        self.ax.set_ylim(-100, 100)
         self.ax.legend()
 
     def read_serial_data(self):
@@ -34,7 +35,7 @@ class AcceloremeterAnglePlotter:
             self.qData.append(qValue)
             
             self.qLine.set_data(self.tData, self.qData)
-            self.qText.set_text(f"Q: {qValue:.4f} rad")
+            self.qText.set_text(f"Angle: {qValue:.4f} deg")
 
             self.ax.set_xlim(max(0, len(self.tData) - 50), len(self.tData))
             self.ax.relim()

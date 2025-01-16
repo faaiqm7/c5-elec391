@@ -7,14 +7,14 @@ class GyroAccumulatedAnglePlotter:
         self.ser = serial.Serial(port, baud_rate, timeout=1)
         self.qData, self.tData = [], []
         self.fig, self.ax = plt.subplots(figsize=(10, 6))
-        self.qLine, = self.ax.plot([], [], label="Accumulated Angle (Q)", color="purple")
+        self.qLine, = self.ax.plot([], [], label="Angle", color="purple")
         self.qText = self.ax.text(0.02, 0.95, "", transform=self.ax.transAxes, fontsize=10, verticalalignment='top')
         self._setup_axes()
 
     def _setup_axes(self):
-        self.ax.set_title("Accumulated Angle (Q) over Time")
-        self.ax.set_xlabel("Time (frames)")
-        self.ax.set_ylabel("Angle (arbitrary units)")
+        self.ax.set_title("Gyro Angle vs Time")
+        self.ax.set_xlabel("Time (ms)")
+        self.ax.set_ylabel("Angle (deg)")
         self.ax.legend()
 
     def read_serial_data(self):

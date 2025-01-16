@@ -31,20 +31,17 @@ void loop() {
         IMU.readGyroscope(gx_0, gy_0, gz_0);
         IMU.readAcceleration(ay_0,ax_0,az_0);
 
-        /*Serial.print(ay_0);
-        Serial.print('\t');
-        Serial.print(ax_0);
-        Serial.print('\t');
-        Serial.print(az_0);
-        Serial.println('\t');*/
-
         QA = atan(ax_0/az_0) * 180/3.14;
+        QG = gz_0*0.01 + QFinal0;
 
-        QFinal = (gz_0*0.01 + QFinal0)*k + QA*(1-k);
+        QFinal = (QG)*k + QA*(1-k);
         QFinal0 = QFinal;
 
-        Serial.print(QFinal);
-        Serial.println('\t');
+        Serial.print(QFinal, 2);
+        Serial.print(',');
+        Serial.print(QA, 2);
+        Serial.print(',');
+        Serial.println(QG, 2);
+        Serial.println();
     }
-    //delay(100); // Adjust the delay for desired update rate
 }
