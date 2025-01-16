@@ -12,7 +12,7 @@ void setup() {
 }
 
 void loop() {
-    float x, y, z;
+    float ax, ay, az;
 
     if (IMU.accelerationAvailable()) {
         IMU.readAcceleration(ay, ax, az); //Axis for X and Y are flipped
