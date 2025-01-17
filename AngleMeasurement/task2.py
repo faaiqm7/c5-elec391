@@ -37,7 +37,7 @@ class AcceloremeterAnglePlotter:
                 line = self.ser.readline().decode('ascii').strip()
             if line:
                 return float(line)
-        except Exception:
+        except Exception: # ignore any errors in reading data
             pass
         return None
 

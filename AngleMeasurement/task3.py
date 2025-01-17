@@ -33,17 +33,16 @@ class GyroAccumulatedAnglePlotter:
     def read_serial_data(self):
         try:
             while self.ser.in_waiting:
-                self.ser.reset_input_buffer()
                 line = self.ser.readline().decode('ascii').strip()
             if line:
                 return float(line)
-        except Exception:
+        except Exception: # ignore any errors in reading data
             pass
         return None
 
     def update(self, frame):
         qValue = self.read_serial_data()
-        if qValue is not None:
+        if qValue :
             self.tData.append(len(self.tData))
             self.qData.append(qValue)
             

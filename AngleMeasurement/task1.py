@@ -36,12 +36,12 @@ class GyroAxisPlotter:
 
     def read_serial_data(self):
         try:
-            while self.ser.in_waiting:
+            while self.ser.in_waiting:  # clear buffer
                 line = self.ser.readline().decode('ascii').strip() 
             values = line.split(',')
             if len(values) == 3:
                 return [float(v) for v in values]
-        except Exception:
+        except Exception: # ignore any errors in reading data
             pass
         return None
 
@@ -61,9 +61,9 @@ class GyroAxisPlotter:
             self.yText.set_text(f"Y: {axData[1]:.2f} deg/s")
             self.zText.set_text(f"Z: {axData[2]:.2f} deg/s")
 
-            self.ax.set_xlim(max(0, len(self.tData) - 50), len(self.tData))
+            self.ax.set_xlim(max(0, len(self.tData) - 50), len(self.tData)) # show last 50 points, scrolls when exceeded
             self.ax.relim()
-            self.ax.autoscale_view()
+            self.ax.autoscale_view() # rescale the view for y-axis
 
         return self.xLine, self.yLine, self.zLine, self.xText, self.yText, self.zText
 
@@ -72,7 +72,7 @@ class GyroAxisPlotter:
         try:
             plt.tight_layout()
             plt.show()
-        except KeyboardInterrupt:
+        except KeyboardInterrupt:   
             pass
         finally:
             self.ser.close()

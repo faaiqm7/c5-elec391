@@ -38,12 +38,12 @@ class ComplimentaryPlotter:
     def read_serial_data(self):
         try:
             while self.ser.in_waiting:
-                self.ser.reset_input_buffer()
+                self.ser.reset_input_buffer() # helped in clearing buffer quicker
                 line = self.ser.readline().decode('ascii', errors='ignore').strip() 
             values = line.split(',')
             if len(values) == 3 and len(values[0]) >= 3:
                 return [float(v) for v in values]
-        except Exception:
+        except Exception: # ignore any errors in reading data
             pass
         return None
 
