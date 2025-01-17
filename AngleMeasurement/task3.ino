@@ -1,7 +1,18 @@
 #include "Arduino_BMI270_BMM150.h"
 
-float QG = 0;
-float QFinal = 0;
+/*
+Name: Task 3 Arduino
+Authors: Adarsh Sood, Samarr Parmaar. Faaiq Majeed (Group L2C C5)
+
+ ################### IMPORTANT COMMENTS #####################
+- For the Arduino the x-axis and y-axis are flipped/inverted (x-axis is actually y-axis vice-versa)
+- From Figure 2 of the assignment PDF:
+    - the y-axis on the figure is the Arduino z-axis
+    - the x-axis on the figure is the Arduino y-axis
+    - the z-axis on the figure is Arduino x-axis
+*/
+
+float Theta_Gyro = 0;
 
 float gx_0, gy_0, gz_0;
 
@@ -27,10 +38,10 @@ void loop() {
         Serial.print(',');
         Serial.println(z_0, 2);*/
 
-        QG = gy_0*0.01 + QG;
+        Theta_Gyro = gy_0*0.01 + Theta_Gyro;
         
 
-        Serial.print(QG);
+        Serial.print(Theta_Gyro);
         Serial.print('\n');
     }
 }

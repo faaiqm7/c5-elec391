@@ -2,6 +2,19 @@ import serial
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
+"""
+Name: Task 1 Python Script
+Authors: Adarsh Sood, Samarr Parmaar. Faaiq Majeed (Group L2C C5)
+
+ ################### IMPORTANT COMMENTS #####################
+- For the Arduino the x-axis and y-axis are flipped/inverted (x-axis is actually y-axis vice-versa)
+- From Figure 2 of the assignment PDF:
+    - the y-axis on the figure is the Arduino z-axis
+    - the x-axis on the figure is the Arduino y-axis
+    - the z-axis on the figure is Arduino x-axis
+
+"""
+
 class GyroAxisPlotter:
     def __init__(self, port="COM3", baud_rate=9600):
         self.ser = serial.Serial(port, baud_rate, timeout=1)
