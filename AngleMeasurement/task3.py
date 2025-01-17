@@ -20,6 +20,7 @@ class GyroAccumulatedAnglePlotter:
     def read_serial_data(self):
         try:
             while self.ser.in_waiting:
+                self.ser.reset_input_buffer()
                 line = self.ser.readline().decode('ascii').strip()
             if line:
                 return float(line)

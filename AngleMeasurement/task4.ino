@@ -28,11 +28,11 @@ void loop() {
 
     if (IMU.gyroscopeAvailable() && IMU.accelerationAvailable()) {
 
-        IMU.readGyroscope(gx_0, gy_0, gz_0);
+        IMU.readGyroscope(gy_0, gx_0, gz_0);
         IMU.readAcceleration(ay_0,ax_0,az_0);
 
         QA = atan(ax_0/az_0) * 180/3.14159;
-        QG = gz_0*0.01 + QFinal;
+        QG = gy_0*0.01 + QFinal;
 
         QFinal = (QG)*k + QA*(1-k);
 

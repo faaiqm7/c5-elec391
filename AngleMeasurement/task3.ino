@@ -3,6 +3,8 @@
 float QG = 0;
 float QFinal = 0;
 
+float gx_0, gy_0, gz_0;
+
 void setup() {
     Serial.begin(9600); // Initialize serial communication
     while (!Serial);
@@ -14,10 +16,9 @@ void setup() {
 }
 
 void loop() {
-    float x_0, y_0, z_0, x_new, y_new, z_new;
 
     if (IMU.gyroscopeAvailable()) {
-        IMU.readGyroscope(gx_0, gy_0, gz_0);
+        IMU.readGyroscope(gy_0, gx_0, gz_0);
 
         // Send x, y, z values as comma-separated
         // Serial.print(x_0, 2);
@@ -26,7 +27,8 @@ void loop() {
         Serial.print(',');
         Serial.println(z_0, 2);*/
 
-        QG = gz_0*0.01 + QFinal;
+        QG = gy_0*0.01 + QG;
+        
 
         Serial.print(QG);
         Serial.print('\n');
