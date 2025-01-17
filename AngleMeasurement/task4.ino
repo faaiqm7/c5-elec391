@@ -31,11 +31,10 @@ void loop() {
         IMU.readGyroscope(gx_0, gy_0, gz_0);
         IMU.readAcceleration(ay_0,ax_0,az_0);
 
-        QA = atan(ax_0/az_0) * 180/3.14;
-        QG = gz_0*0.01 + QFinal0;
+        QA = atan(ax_0/az_0) * 180/3.14159;
+        QG = gz_0*0.01 + QFinal;
 
         QFinal = (QG)*k + QA*(1-k);
-        QFinal0 = QFinal;
 
         Serial.print(QFinal, 2);
         Serial.print(',');
