@@ -16,7 +16,7 @@ Authors: Adarsh Sood, Samarr Parmaar. Faaiq Majeed (Group L2C C5)
 """
 
 class GyroAxisPlotter:
-    def __init__(self, port="COM3", baud_rate=9600):
+    def __init__(self, port="COM7", baud_rate=9600):
         self.ser = serial.Serial(port, baud_rate, timeout=1)
         self.xData, self.yData, self.zData, self.tData = [], [], [], []
         self.fig, self.ax = plt.subplots(figsize=(10, 6))
@@ -26,17 +26,17 @@ class GyroAxisPlotter:
         self.xText = self.ax.text(0.02, 0.95, "", transform=self.ax.transAxes, fontsize=10, verticalalignment='top')
         self.yText = self.ax.text(0.02, 0.90, "", transform=self.ax.transAxes, fontsize=10, verticalalignment='top')
         self.zText = self.ax.text(0.02, 0.85, "", transform=self.ax.transAxes, fontsize=10, verticalalignment='top')
-        self._setup_axes()
+        self.axesSetup()
 
-    def _setup_axes(self):
+    def axesSetup(self):
         self.ax.set_title("Gyroscope XYZ Data")
-        self.ax.set_xlabel("Time")
+        self.ax.set_xlabel("Time(ms)")
         self.ax.set_ylabel("Angular Speed (deg/s)")
         self.ax.legend()
 
-    def read_serial_data(self):
+    def serialRead(self):
         try:
-            while self.ser.in_waiting:  # clear buffer
+            while self.ser.in_waiting:  # while helps clear the buffer out compared to if
                 line = self.ser.readline().decode('ascii').strip() 
             values = line.split(',')
             if len(values) == 3:
@@ -46,7 +46,7 @@ class GyroAxisPlotter:
         return None
 
     def update(self, frame):
-        axData = self.read_serial_data()
+        axData = self.serialRead()
         if axData:
             self.tData.append(len(self.tData))
             self.xData.append(axData[0])

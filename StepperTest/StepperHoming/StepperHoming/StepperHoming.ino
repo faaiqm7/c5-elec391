@@ -11,6 +11,8 @@ int step_number = 0;
 
 float angle = 0; //Clock-wise = Positive angle gain, Counter-clockwise = Negative angle gain
 float angleStepRatio = 5.625/64; //5.625 degrees/64 steps approximately  == 0.088 degrees/step
+float gearStepperRatio = 1;
+int stepperHomingExtraSteps = 36;
 
 void setup() {
   pinMode(STEPPER_PIN_1, OUTPUT);
@@ -35,6 +37,12 @@ void stepperHoming()
   {
     OneStep(direction);
     delay(2);
+  }
+  while(stepperHomingExtraSteps > 0)
+  {
+    OneStep(direction);
+    delay(2);
+    stepperHomingExtraSteps--;
   }
   angle = 0;
 }

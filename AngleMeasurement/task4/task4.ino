@@ -20,7 +20,7 @@ float Theta_Acc = 0;
 
 //Weighted Values
 float Theta_Final = 0;
-float k = 0.6;
+float k = 0.8; //0.6 before
 
 float gx_0, gy_0, gz_0, ax_0,ay_0,az_0, x_0, x;
 
@@ -51,6 +51,5 @@ void loop() {
         Serial.print(Theta_Acc, 2);
         Serial.print(',');
         Serial.println(Theta_Gyro, 2);
-        Serial.println();
     }
 }

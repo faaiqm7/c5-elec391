@@ -16,23 +16,24 @@ Authors: Adarsh Sood, Samarr Parmaar. Faaiq Majeed (Group L2C C5)
 """
 
 class GyroAccumulatedAnglePlotter:
-    def __init__(self, port="COM3", baud_rate=9600):
+    def __init__(self, port="COM7", baud_rate=9600):
         self.ser = serial.Serial(port, baud_rate, timeout=1)
         self.qData, self.tData = [], []
         self.fig, self.ax = plt.subplots(figsize=(10, 6))
         self.qLine, = self.ax.plot([], [], label="Angle", color="purple")
         self.qText = self.ax.text(0.02, 0.95, "", transform=self.ax.transAxes, fontsize=10, verticalalignment='top')
-        self._setup_axes()
+        self.axesSetup()
 
-    def _setup_axes(self):
+    def axesSetup(self):
         self.ax.set_title("Gyro Angle vs Time")
         self.ax.set_xlabel("Time (ms)")
         self.ax.set_ylabel("Angle (deg)")
+        self.ax.set_ylim(-100, 100)
         self.ax.legend()
 
-    def read_serial_data(self):
+    def serialRead(self):
         try:
-            while self.ser.in_waiting:
+            while self.ser.in_waiting: # while helps clear the buffer out compared to if
                 line = self.ser.readline().decode('ascii').strip()
             if line:
                 return float(line)
@@ -41,7 +42,7 @@ class GyroAccumulatedAnglePlotter:
         return None
 
     def update(self, frame):
-        qValue = self.read_serial_data()
+        qValue = self.serialRead()
         if qValue :
             self.tData.append(len(self.tData))
             self.qData.append(qValue)
