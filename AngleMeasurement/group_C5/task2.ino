@@ -1,7 +1,7 @@
 #include "Arduino_BMI270_BMM150.h"
 
 /*
-Name: Task 4 Arduino
+Name: Task 2 Arduino
 Authors: Adarsh Sood, Samarr Parmaar. Faaiq Majeed (Group L2C C5)
 
  ################### IMPORTANT COMMENTS #####################
@@ -12,18 +12,7 @@ Authors: Adarsh Sood, Samarr Parmaar. Faaiq Majeed (Group L2C C5)
     - the z-axis on the figure is Arduino x-axis
 */
 
-//Gyroscope Values
-float Theta_Gyro = 0;
-
-//Accelerometer Values
-float Theta_Acc = 0;
-
-//Weighted Values
 float Theta_Final = 0;
-float k = 0.6; //0.6 before
-
-float gx_0, gy_0, gz_0, ax_0,ay_0,az_0, x_0, x;
-
 void setup() {
     Serial.begin(9600); // Initialize serial communication
     while (!Serial);
@@ -35,21 +24,19 @@ void setup() {
 }
 
 void loop() {
+    float ax, ay, az;
 
-    if (IMU.gyroscopeAvailable() && IMU.accelerationAvailable()) {
+    if (IMU.accelerationAvailable()) {
+        IMU.readAcceleration(ay, ax, az); //Axis for X and Y are flipped
 
-        IMU.readGyroscope(gy_0, gx_0, gz_0);
-        IMU.readAcceleration(ay_0,ax_0,az_0);
+        Theta_Final = atan(ax/az) * 180 / 3.14159; // Calculate the angle in degrees
 
-        Theta_Acc = atan(ax_0/az_0) * 180/3.14159;
-        Theta_Gyro = gy_0*0.01 + Theta_Final;
-
-        Theta_Final = (Theta_Gyro)*k + Theta_Acc*(1-k);
-
-        Serial.print(Theta_Final, 2);
-        Serial.print(',');
-        Serial.print(Theta_Acc, 2);
-        Serial.print(',');
-        Serial.println(Theta_Gyro, 2);
+        // Send x, y, z values as comma-separated
+        Serial.print(Theta_Final);
+        Serial.print('\n');
+        //Serial.print(',');
+        //Serial.print(y, 2);
+        //Serial.print(',');
+        //Serial.println(z, 2);
     }
 }

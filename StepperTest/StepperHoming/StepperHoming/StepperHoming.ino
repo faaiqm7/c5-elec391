@@ -20,14 +20,13 @@ void setup() {
   pinMode(STEPPER_PIN_3, OUTPUT);
   pinMode(STEPPER_PIN_4, OUTPUT);
   pinMode(STEPPER_IR_SENSOR_PIN, INPUT);
-
   stepperHoming(); //Initialize Angle 0;
 }
 
 void loop() {
  
   //OneStep(direction);
-  Serial.println(angle);
+  //Serial.println(angle);
   delay(2);
 }
 
