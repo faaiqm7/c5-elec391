@@ -1,6 +1,15 @@
+#include <mbed.h>
 #include <ArduinoBLE.h>
 #include "Arduino_BMI270_BMM150.h"
-#include <math.h>
+#include <math.h> 
+
+using namespace mbed;
+using namespace rtos;
+using namespace std::chrono_literals;
+
+Thread readIMUFunction;
+Thread BLEReceiveSendFunction;
+
 
 #define BUFFER_SIZE 20
 
@@ -34,11 +43,7 @@ void setup() {
 }
 
 void loop() {
-  while(laptopMaster.connected())
-  {
-    readIMUData();
-    Robot2MasterSendReceive();
-  }
+
 }
 
 void initializeALL()
@@ -64,6 +69,9 @@ void initializeALL()
         Serial.println("Failed to initialize IMU!");
         while (1);
     }
+
+    readIMUFunction.start(readIMUData);
+    BLEReceiveSendFunction.start(Robot2MasterSendReceive);
 }
 
 void connectToMasterLaptop()
@@ -81,6 +89,8 @@ void connectToMasterLaptop()
 
 void Robot2MasterSendReceive()
 {
+  while(laptopMaster.connected())
+  {
     //Receiving data from Laptop Master
     String Laptop2RobotReceived = laptopMasterReceiveCharacteristic.value();
     int testReceive = Laptop2RobotReceived.toInt();
@@ -88,11 +98,14 @@ void Robot2MasterSendReceive()
 
     // Read from IMU and Send Data to Laptop Master (convert float to byte array)
     laptopMasterCharacteristic.writeValue(String(Theta_Final, 3));
+  }
 }
 
 void readIMUData()
 {
-  if (IMU.gyroscopeAvailable() && IMU.accelerationAvailable()) {
+  while(true)
+  {
+    if (IMU.gyroscopeAvailable() && IMU.accelerationAvailable()) {
 
       IMU.readGyroscope(gy_0, gx_0, gz_0);
       IMU.readAcceleration(ay_0,ax_0,az_0);
@@ -101,5 +114,6 @@ void readIMUData()
       Theta_Gyro = gy_0*0.01 + Theta_Final;
 
       Theta_Final = (Theta_Gyro)*k + Theta_Acc*(1-k);
+    }
   }
 }

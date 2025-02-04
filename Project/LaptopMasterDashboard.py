@@ -82,7 +82,7 @@ forwardbutton = customtkinter.CTkButton(
     hover_color="#9C0000",
     text_color="white"
 )
-forwardbutton.place(relx=0.1, rely=0.475, anchor="center")
+forwardbutton.place(relx=0.2, rely=0.575, anchor="center")
 
 # Create Backward Button
 backwardbutton = customtkinter.CTkButton(
@@ -93,7 +93,7 @@ backwardbutton = customtkinter.CTkButton(
     hover_color="#9C0000",
     text_color="white"
 )
-backwardbutton.place(relx=0.1, rely=0.525, anchor="center")
+backwardbutton.place(relx=0.2, rely=0.625, anchor="center")
 
 # Create Left Button
 leftbutton = customtkinter.CTkButton(
@@ -104,7 +104,7 @@ leftbutton = customtkinter.CTkButton(
     hover_color="#9C0000",
     text_color="white"
 )
-leftbutton.place(relx=0.05, rely=0.525, anchor="center")
+leftbutton.place(relx=0.15, rely=0.625, anchor="center")
 
 # Create Right Button
 rightbutton = customtkinter.CTkButton(
@@ -115,7 +115,7 @@ rightbutton = customtkinter.CTkButton(
     hover_color="#9C0000",
     text_color="white"
 )
-rightbutton.place(relx=0.15, rely=0.525, anchor="center")
+rightbutton.place(relx=0.25, rely=0.625, anchor="center")
 
 # Bind movement keys to increase speed
 root.bind("<w>", lambda event: asyncio.create_task(handle_key_press(event, forwardbutton, "Forward", "w")))

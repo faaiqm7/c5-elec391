@@ -8,12 +8,7 @@ laptop_master_characteristic_uuid = "00000001-5EC4-4083-81CD-A10B8D5CF6EC"
 laptop_master_send_characteristic_uuid = "00000002-5EC4-4083-81CD-A10B8D5CF6EC"
 
 # The name of the Arduino device (same as what you set in the Arduino sketch)
-arduino_device_name = "C5-BLE"  # Replace with the name you gave to your Arduino device
-
-# Callback function to handle received data from the Arduino
-def notification_handler(sender: int, data: bytearray):
-    # Decode the byte data and print the result
-    print("Received data from Arduino:", data.decode())
+arduino_device_name = "C5-BLE"  # Replace with the name you gave to your Arduino deviceclccc
 
 # Function to interact with the Arduino
 async def run():
@@ -44,10 +39,10 @@ async def run():
                 try:
                     valueReceived = valueReceived.decode('utf-8')
                     print(f"{valueReceived} Degrees")
-                    test_str = str(test)
+                    test_str = str(8)
                     test_str_bytes = bytearray(test_str, encoding = "utf-8")
                     await client.write_gatt_char(laptop_master_send_characteristic_uuid, test_str_bytes, response=True)
-                    await asyncio.sleep(0.01)  # Adjust the sleep time if needed
+                    await asyncio.sleep(0.001)  # Adjust the sleep time if needed
                 except KeyboardInterrupt:
                     print("Disconnected from the Arduino")
 
