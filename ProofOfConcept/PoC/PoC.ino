@@ -20,27 +20,30 @@ void setup() {
 
 }
 
-/*
-INPUT INTO Serial Example
+/**************************************************************************************
+ INPUT INTO Serial Example
 
-50 0 75 1
+ 50 0 75 1
 
-Above input will give 50% max RPM into left motor with forward direction and 75% max rpm into right motor with backward direction.
+ Above input will give 50% max RPM into left motor
+ with forward direction and 75% max rpm into right
+ motor with backward direction.
 
 
-*/
+***************************************************************************************/
 
 void loop() {
     if(Serial.available())
     {
       String input = Serial.readString();
+      Serial.println(input);
 
       LEFT_MOTOR_PWM_SPEED = input.substring(0, input.indexOf(' ')).toInt();
-      input = input.substring(' ' + 1);
+      input = input.substring(input.indexOf(' ') + 1);
       LEFT_MOTOR_DIR = input.substring(0, input.indexOf(' ')).toInt();
-      input = input.substring(' ' + 1);
+      input = input.substring(input.indexOf(' ') + 1);
       RIGHT_MOTOR_PWM_SPEED = input.substring(0, input.indexOf(' ')).toInt();
-      input = input.substring(' ' + 1);
+      input = input.substring(input.indexOf(' ') + 1);
       RIGHT_MOTOR_DIR = input.substring(0, input.indexOf(' ')).toInt();
 
       controlWheelMotors(LEFT_MOTOR_PWM_SPEED, LEFT_MOTOR_DIR, RIGHT_MOTOR_PWM_SPEED, RIGHT_MOTOR_DIR);
@@ -57,12 +60,12 @@ void loop() {
     }
 }
 
-/*
-LEFT_MOTOR_PWM_SPEED (0,100) : % of max RPM into Left Motor
-LEFT_MOTOR_DIR (0 OR 1) : 0 = Forward Direction of Left Motor and 1 = Backward Direction of Left Motor
-RIGHT_MOTOR_PWM_SPEED (0,100) : % of max RPM into Right Motor
-RIGHT_MOTOR_DIR (0 OR 1) : 0 = Forward Direction of Right Motor and 1 = Backward Direction of Right Motor
-*/
+/************************************************************************************************************
+ LEFT_MOTOR_PWM_SPEED (0,100) : % of max RPM into Left Motor
+ LEFT_MOTOR_DIR (0 OR 1) : 0 = Forward Direction of Left Motor and 1 = Backward Direction of Left Motor
+ RIGHT_MOTOR_PWM_SPEED (0,100) : % of max RPM into Right Motor
+ RIGHT_MOTOR_DIR (0 OR 1) : 0 = Forward Direction of Right Motor and 1 = Backward Direction of Right Motor
+*************************************************************************************************************/
 
 void controlWheelMotors(int LEFT_MOTOR_PWM_SPEED, int LEFT_MOTOR_DIR, int RIGHT_MOTOR_PWM_SPEED, int RIGHT_MOTOR_DIR)
 {
