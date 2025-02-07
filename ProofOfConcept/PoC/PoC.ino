@@ -36,7 +36,6 @@ void loop() {
     if(Serial.available())
     {
       String input = Serial.readString();
-      Serial.println(input);
 
       LEFT_MOTOR_PWM_SPEED = input.substring(0, input.indexOf(' ')).toInt();
       input = input.substring(input.indexOf(' ') + 1);

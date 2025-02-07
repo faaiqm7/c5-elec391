@@ -1,5 +1,4 @@
 #include <mbed.h>
-#include <ArduinoBLE.h>
 #include "Arduino_BMI270_BMM150.h"
 #include <math.h> 
 
@@ -74,21 +73,38 @@ void readIMUFunction()
   }
 }
 
+/*
+Theta_Final is between 0 to 45 and 0 to -45 degrees from 0 to max rpm
+*/
+
 void moveMotorsFunction()
 {
-  if(Theta_Final == 0 || Theta_Final == -90 || Theta_Final == 90)
+  while(true)
   {
-    analogWrite(LEFT_MOTOR_FORWARD_PIN, 0);
-    analogWrite(LEFT_MOTOR_BACKWARD_PIN, 0);
-    analogWrite(RIGHT_MOTOR_FORWARD_PIN, 0);
-    analogWrite(RIGHT_MOTOR_BACKWARD_PIN, 0);
-  }
-  else if(Theta_Final > 0)
-  {
-
-  }
-  else
-  {
-    
+    if(Theta_Final == 0)
+    {
+      analogWrite(LEFT_MOTOR_FORWARD_PIN, 0);
+      analogWrite(LEFT_MOTOR_BACKWARD_PIN, 0);
+      analogWrite(RIGHT_MOTOR_FORWARD_PIN, 0);
+      analogWrite(RIGHT_MOTOR_BACKWARD_PIN, 0);
+    }
+    else if(Theta_Final > 0 && Theta_Final <= 45)
+    {
+      analogWrite(LEFT_MOTOR_FORWARD_PIN, (Theta_Final/45.0)*255.0);
+      analogWrite(LEFT_MOTOR_BACKWARD_PIN, 0);
+      analogWrite(RIGHT_MOTOR_FORWARD_PIN, (Theta_Final/45.0)*255.0);
+      analogWrite(RIGHT_MOTOR_BACKWARD_PIN, 0);
+    }
+    else if(Theta_Final < 0 && Theta_Final >= -45)
+    {
+      analogWrite(LEFT_MOTOR_FORWARD_PIN, 0);
+      analogWrite(LEFT_MOTOR_BACKWARD_PIN, -(Theta_Final/45.0)*255.0);
+      analogWrite(RIGHT_MOTOR_FORWARD_PIN, 0);
+      analogWrite(RIGHT_MOTOR_BACKWARD_PIN, -(Theta_Final/45.0)*255.0);
+    }
+    else
+    {
+      //If angle is past the +- 45 degrees then just keep the current speed (should be max RPM technically)
+    }
   }
 }
