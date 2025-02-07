@@ -73,7 +73,7 @@ void controlWheelMotors(int LEFT_MOTOR_PWM_SPEED, int LEFT_MOTOR_DIR, int RIGHT_
     analogWrite(LEFT_MOTOR_FORWARD_PIN, (LEFT_MOTOR_PWM_SPEED/100.0)*255.0);
     analogWrite(LEFT_MOTOR_BACKWARD_PIN, 0);
   }
-  else
+  else if(LEFT_MOTOR_DIR == 1)
   {
     analogWrite(LEFT_MOTOR_FORWARD_PIN, 0);
     analogWrite(LEFT_MOTOR_BACKWARD_PIN, (LEFT_MOTOR_PWM_SPEED/100.0)*255.0);
@@ -84,7 +84,7 @@ void controlWheelMotors(int LEFT_MOTOR_PWM_SPEED, int LEFT_MOTOR_DIR, int RIGHT_
     analogWrite(RIGHT_MOTOR_FORWARD_PIN, (RIGHT_MOTOR_PWM_SPEED/100.0)*255.0);
     analogWrite(RIGHT_MOTOR_BACKWARD_PIN, 0);
   }
-  else
+  else if(RIGHT_MOTOR_DIR == 1)
   {
     analogWrite(RIGHT_MOTOR_FORWARD_PIN, 0);
     analogWrite(RIGHT_MOTOR_BACKWARD_PIN, (RIGHT_MOTOR_PWM_SPEED/100.0)*255.0);
