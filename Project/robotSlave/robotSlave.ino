@@ -91,10 +91,13 @@ void Robot2MasterSendReceive()
 {
   while(laptopMaster.connected())
   {
-    //Receiving data from Laptop Master
-    String Laptop2RobotReceived = laptopMasterReceiveCharacteristic.value();
-    int testReceive = Laptop2RobotReceived.toInt();
-    Serial.println(testReceive);
+    if(laptopMasterReceiveCharacteristic.written())
+    {
+      //Receiving data from Laptop Master
+      String Laptop2RobotReceived = laptopMasterReceiveCharacteristic.value();
+      int testReceive = Laptop2RobotReceived.toInt();
+      Serial.println(testReceive);
+    }
 
     // Read from IMU and Send Data to Laptop Master (convert float to byte array)
     laptopMasterCharacteristic.writeValue(String(Theta_Final, 3));
