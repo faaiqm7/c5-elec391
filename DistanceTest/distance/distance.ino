@@ -32,8 +32,7 @@ float ax_alpha = 0.8;
 
 void setup() {
   Serial.begin(9600);  // Initialize serial communication
-  while (!Serial)
-    ;
+  while (!Serial);
 
   if (!IMU.begin()) {
     Serial.println("Failed to initialize IMU!");
