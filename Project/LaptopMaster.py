@@ -4,6 +4,11 @@ from bleak import BleakClient, BleakScanner
 import threading
 from pynput import keyboard
 import time
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import numpy as np
+import sys
+import io
 
 # Define the BLE UUIDs
 laptop_master_service_uuid = "00000000-5EC4-4083-81CD-A10B8D5CF6EC"
@@ -26,6 +31,10 @@ Right_Speed = 0
 # Throttle BLE messages
 last_sent_time = 0
 send_interval = 0.1  # Minimum time between BLE sends (100ms)
+
+# Angle Data for Live Plotting
+angles = []  # List to store received angles
+time_stamps = []  # List to store time of each angle reading
 
 def send_ble_command():
     global last_sent_time
@@ -84,7 +93,7 @@ def on_button_click(direction):
     send_ble_command()
 
 async def run_ble():
-    global client, ble_loop
+    global client, ble_loop, angles, time_stamps
     ble_loop = asyncio.get_running_loop()
     devices = await BleakScanner.discover()
     arduino_device = next((device for device in devices if device.name == arduino_device_name), None)
@@ -101,10 +110,42 @@ async def run_ble():
                 valueReceived = await client.read_gatt_char(laptop_master_characteristic_uuid)
                 valueReceived = valueReceived.decode('utf-8')
                 print(f"{valueReceived} Degrees")
+
+                # Update angle data for plotting
+                current_time = time.time()
+                angles.append(float(valueReceived))
+                time_stamps.append(current_time)
+
+                # Limit the number of points in the plot to avoid memory issues
+                if len(angles) > 100:
+                    angles.pop(0)
+                    time_stamps.pop(0)
+
+                update_plot()
+
+                # Update the angle label
+                update_angle_label()
+
                 await asyncio.sleep(0.01)
             except Exception as e:
                 print(f"Error: {e}")
                 break
+
+# Create and update plot
+def update_plot():
+    global angles, time_stamps
+    ax.clear()
+    
+    # Plot the angle with a red line
+    ax.plot(time_stamps, angles, label="Angle (Degrees)", color="#DE0000")
+    
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Angle (°)")
+
+    # Remove the scientific notation for the x-axis
+    ax.get_xaxis().get_major_formatter().set_scientific(False)
+
+    canvas.draw()
 
 # Run BLE communication in a separate thread
 def start_ble_loop():
@@ -125,6 +166,33 @@ root = ctk.CTk()
 root.geometry("1366x768")
 root.title("C5 Balancing Robot Controller")
 
+# Set the root window background to white
+root.configure(bg="white")
+
+# Add text above the angle plot
+angleplot_label = ctk.CTkLabel(root, text="Robot Angle", font=("Roboto", 24))
+angleplot_label.place(relx=0.64, rely=0.153, anchor="center")
+
+
+# Create a frame for plotting the angle
+plot_frame = ctk.CTkFrame(root, width=500, height=100)
+plot_frame.place(relx=0.77, rely=0.4, anchor="center")
+
+# Create a Matplotlib figure with a dark-red border
+fig, ax = plt.subplots(figsize=(6.25, 4.5))
+
+# Set the figure's border color to dark red
+fig.patch.set_edgecolor('#9A0000')  # Dark red color
+fig.patch.set_linewidth(3)  # Set border thickness
+
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Angle (°)")
+
+# Embed Matplotlib plot into CustomTkinter window
+canvas = FigureCanvasTkAgg(fig, master=plot_frame)
+canvas.get_tk_widget().pack(fill="both", expand=True)
+
+# Add control buttons
 button_forward = ctk.CTkButton(root, 
                                text="Forward", 
                                width=60, 
@@ -163,5 +231,47 @@ button_right.place(relx=0.15, rely=0.625, anchor="center")
 
 label = ctk.CTkLabel(root, text="C5-Robot", font=("Roboto", 40))
 label.place(relx=0.1, rely=0.1, anchor="center")
+
+# Create a terminal display with custom border color and width
+terminal_frame = ctk.CTkFrame(root, width=500, height=200, border_color="#9A0000", border_width=2)
+terminal_frame.place(relx=0.74, rely=0.8, anchor="center")
+
+# Remove default border from the terminal text box by setting border width to 0
+terminal = ctk.CTkTextbox(terminal_frame, width=480, height=180, wrap="word", state="disabled", font=("Courier", 12), border_width=0)
+terminal.pack(padx=10, pady=10)
+
+# Add text above the terminal
+terminal_label = ctk.CTkLabel(root, text="Terminal", font=("Roboto", 16))
+terminal_label.place(relx=0.628, rely=0.685, anchor="center")
+
+# Redirect print to the terminal
+class TerminalRedirector(io.StringIO):
+    def __init__(self, textbox):
+        super().__init__()
+        self.textbox = textbox
+    
+    def write(self, text):
+        self.textbox.configure(state="normal")
+        self.textbox.insert("end", text)
+        self.textbox.yview("end")  # Auto-scroll
+        self.textbox.configure(state="disabled")
+
+# Set up terminal redirection
+sys.stdout = TerminalRedirector(terminal)
+
+# Create a white background frame for the angle label
+angle_frame = ctk.CTkFrame(root, width=160, height=50, fg_color="white", border_width=2, border_color="#9A0000")
+angle_frame.place(relx=0.1, rely=0.45, anchor="center")
+
+# Create the angle label inside the frame
+angle_label = ctk.CTkLabel(angle_frame, text="Angle: 0°", font=("Roboto", 24))
+angle_label.place(relx=0.5, rely=0.5, anchor="center")  # Center the label inside the frame
+
+# Update the angle label with the latest value
+def update_angle_label():
+    global angles
+    if angles:
+        latest_angle = angles[-1]
+        angle_label.configure(text=f"Angle: {latest_angle:.2f}°")
 
 root.mainloop()
