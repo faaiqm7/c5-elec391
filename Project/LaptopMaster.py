@@ -55,12 +55,20 @@ def on_press(key):
     try:
         if key.char == 'w':
             Forward_Speed += 1
+            if(Forward_Speed >= 100):
+                Forward_Speed = 100
         elif key.char == 's':
             Back_Speed += 1
+            if(Back_Speed >= 100):
+                Back_Speed = 100
         elif key.char == 'a':
             Left_Speed += 1
+            if(Left_Speed >= 100):
+                Left_Speed = 100
         elif key.char == 'd':
             Right_Speed += 1
+            if(Right_Speed >= 100):
+                Right_Speed = 100
         send_ble_command()
     except AttributeError:
         pass

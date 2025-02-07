@@ -3,6 +3,11 @@
 #include "Arduino_BMI270_BMM150.h"
 #include <math.h>
 
+#define LEFT_MOTOR_FORWARD_PIN  A0
+#define LEFT_MOTOR_BACKWARD_PIN  A1
+#define RIGHT_MOTOR_FORWARD_PIN  A2
+#define RIGHT_MOTOR_BACKWARD_PIN  A3
+
 using namespace mbed;
 using namespace rtos;
 using namespace std::chrono_literals;
