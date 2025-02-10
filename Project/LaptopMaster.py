@@ -12,8 +12,10 @@ import io
 
 # Define the BLE UUIDs
 laptop_master_service_uuid = "00000000-5EC4-4083-81CD-A10B8D5CF6EC"
-laptop_master_characteristic_uuid = "00000001-5EC4-4083-81CD-A10B8D5CF6EC"
+laptop_master_characteristic_angle_uuid = "00000001-5EC4-4083-81CD-A10B8D5CF6EC"
 laptop_master_send_characteristic_uuid = "00000002-5EC4-4083-81CD-A10B8D5CF6EC"
+laptop_master_characteristic_coordinates_uuid = "00000003-5EC4-4083-81CD-A10B8D5CF6EC"
+laptop_master_characteristic_distance_sensor_uuid = "00000004-5EC4-4083-81CD-A10B8D5CF6EC"
 
 # The name of the Arduino device
 arduino_device_name = "C5-BLE"  # Replace with your Arduino device name
@@ -115,13 +117,17 @@ async def run_ble():
         print(f"Connected to {arduino_device_name}\n")
         while True:
             try:
-                valueReceived = await client.read_gatt_char(laptop_master_characteristic_uuid)
-                valueReceived = valueReceived.decode('utf-8')
-                print(f"{valueReceived} Degrees")
+                coordinatesReceived = await client.read_gatt_char(laptop_master_characteristic_coordinates_uuid)
+                angleReceived = await client.read_gatt_char(laptop_master_characteristic_angle_uuid)
+                distanceSensed = await client.read_gatt_char(laptop_master_characteristic_distance_sensor_uuid)
+                coordinatesReceived = coordinatesReceived.decode('utf-8')
+                angleReceived = angleReceived.decode('utf-8')
+                distanceSensed = distanceSensed.decode('utf-8')
+                print(f"{angleReceived} Degrees at {coordinatesReceived} and distance sensed: {distanceSensed}")
 
                 # Update angle data for plotting
                 current_time = time.time()
-                angles.append(float(valueReceived))
+                angles.append(float(angleReceived))
                 time_stamps.append(current_time)
 
                 # Limit the number of points in the plot to avoid memory issues
