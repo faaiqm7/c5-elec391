@@ -57,8 +57,8 @@ int left_Motor_Speed, right_Motor_Speed, forward_Motor_Speed, back_Motor_Speed;
 
 //Stepper Motor Variables
 float stepper_angle = 0; //Clock-wise = Positive angle gain, Counter-clockwise = Negative angle gain
-float angleStepRatio = 5.625/64; //5.625 degrees/64 steps approximately  == 0.088 degrees/step
-float gearStepperRatio = 1;
+float gearStepperRatio = 2;
+float angleStepRatio = 5.625/64*gearStepperRatio; //5.625 degrees/64 steps approximately  == 0.088 degrees/step
 int stepperHomingExtraSteps = 36;
 bool direction = false; //False == CW Motion, True = CCW Motion
 int step_number = 0;
@@ -211,7 +211,7 @@ void rotateStepper()
   while(true)
   {
     OneStep(direction);
-    delay(2);
+    delay(4);
   }
 }
 

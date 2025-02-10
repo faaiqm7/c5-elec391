@@ -10,8 +10,8 @@ bool direction = false; //False == CW Motion, True = CCW Motion
 int step_number = 0;
 
 float angle = 0; //Clock-wise = Positive angle gain, Counter-clockwise = Negative angle gain
-float angleStepRatio = 5.625/64; //5.625 degrees/64 steps approximately  == 0.088 degrees/step
-float gearStepperRatio = 1;
+float gearStepperRatio = 2;
+float angleStepRatio = 5.625/64*gearStepperRatio; //5.625 degrees/64 steps approximately  == 0.088 degrees/step
 int stepperHomingExtraSteps = 36;
 
 void setup() {
@@ -25,9 +25,9 @@ void setup() {
 
 void loop() {
  
-  //OneStep(direction);
-  //Serial.println(angle);
-  delay(2);
+  OneStep(direction);
+  Serial.println(angle);
+  delay(4);
 }
 
 void stepperHoming()
