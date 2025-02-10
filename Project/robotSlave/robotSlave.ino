@@ -77,7 +77,7 @@ float wheel_circumference = 2*pi*wheel_radius;
 float metersPerDegree = wheel_circumference/360.0;
 
 //PID Variables
-float et, kp_et,ki_et,kd_et;
+float et_old,et_new, kp_et,ki_et,kd_et,et_integral;
 float kp = 1; //Proportional
 float ki = 1; //Integral
 float kd = 1; //Derivative
@@ -93,6 +93,10 @@ void setup() {
 }
 
 void loop() {
+  Serial.print("Stepper Angle: ");
+  Serial.print(stepper_angle);
+  Serial.print(" Distance Sensor: ");
+  Serial.println(distanceSensed);
 }
 
 void initializeALL() {
@@ -207,6 +211,7 @@ void rotateStepper()
   while(true)
   {
     OneStep(direction);
+    delay(2);
   }
 }
 
@@ -214,7 +219,7 @@ void readDistanceSensor()
 {
   while(true)
   {
-    distanceSensed = distanceSensor.measureDistanceCm()/100.0;
+    distanceSensed = distanceSensor.measureDistanceCm()/100.0; //in meters
   }
 }
 
@@ -222,9 +227,16 @@ void PID()
 {
   dt = (millis() - time_0)/1000.0; //converted to seconds
   
+  et_new = desired_angle - Theta_Final;
+  
+  kp_et = kp*et_new;
 
+  et_integral += et_new;
+  ki_et = ki*(et_integral);
+  
+  kd_et = (et_new-et_old)/dt;
 
-
+  et_old = et_new;
   time_0 = millis();
 }
 
