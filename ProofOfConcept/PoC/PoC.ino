@@ -1,7 +1,7 @@
-#define LEFT_MOTOR_FORWARD_PIN  A0
-#define LEFT_MOTOR_BACKWARD_PIN  A1
-#define RIGHT_MOTOR_FORWARD_PIN  A2
-#define RIGHT_MOTOR_BACKWARD_PIN  A3
+#define LEFT_MOTOR_FORWARD_PIN  A1
+#define LEFT_MOTOR_BACKWARD_PIN  A0
+#define RIGHT_MOTOR_FORWARD_PIN  A3
+#define RIGHT_MOTOR_BACKWARD_PIN  A2
 
 #define STEPPER_IR_SENSOR_PIN 6
 
@@ -11,8 +11,8 @@ int RIGHT_MOTOR_PWM_SPEED = 0;
 int RIGHT_MOTOR_DIR = 0;
 
 unsigned long t0,t1;
-int wheelturns = 0;
-int rpm = 0;
+unsigned long wheelturns = 0;
+unsigned long rpm = 0;
 
 void RPM__ISR() {
   wheelturns++;
@@ -69,14 +69,18 @@ void loop() {
       Serial.println(RIGHT_MOTOR_DIR); 
 
     }
-    t1 = micros();
-    if(t1 - t0 > 5000000) //wait 5 seconds
+    t1 = millis();
+    if(t1 - t0 > 5000) //wait 5 seconds
     {
-      rpm = (wheelturns)/(t1-t0)*1000000*60.0;
-      wheelturns = 0;
-      Serial.print("RPM: ");
+      rpm = ((wheelturns)/((float)(t1-t0)))*1000.0*60.0;
+      Serial.print("Turns: ");
+      Serial.print(wheelturns);
+      //Serial.print(" dt: ");
+      //Serial.print(t1 - t0);*/
+      Serial.print(" RPM: ");
       Serial.println(rpm);
-      t0 = micros();
+      t0 = millis();
+      wheelturns = 0;
     }
     
 }
