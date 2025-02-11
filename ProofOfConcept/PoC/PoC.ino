@@ -3,10 +3,20 @@
 #define RIGHT_MOTOR_FORWARD_PIN  A2
 #define RIGHT_MOTOR_BACKWARD_PIN  A3
 
+#define STEPPER_IR_SENSOR_PIN 6
+
 int LEFT_MOTOR_PWM_SPEED = 0;
 int LEFT_MOTOR_DIR = 0;
 int RIGHT_MOTOR_PWM_SPEED = 0;
 int RIGHT_MOTOR_DIR = 0;
+
+unsigned long t0,t1;
+int wheelturns = 0;
+int rpm = 0;
+
+void RPM__ISR() {
+  wheelturns++;
+}
 
 void setup() {
 
@@ -17,7 +27,9 @@ void setup() {
     pinMode(LEFT_MOTOR_BACKWARD_PIN, OUTPUT);
     pinMode(RIGHT_MOTOR_FORWARD_PIN, OUTPUT);
     pinMode(RIGHT_MOTOR_BACKWARD_PIN, OUTPUT);
-
+    pinMode(STEPPER_IR_SENSOR_PIN, INPUT);
+    attachInterrupt(digitalPinToInterrupt(STEPPER_IR_SENSOR_PIN), RPM__ISR, RISING);
+    t0 = micros();
 }
 
 /**************************************************************************************
@@ -57,6 +69,16 @@ void loop() {
       Serial.println(RIGHT_MOTOR_DIR); 
 
     }
+    t1 = micros();
+    if(t1 - t0 > 5000000) //wait 5 seconds
+    {
+      rpm = (wheelturns)/(t1-t0)*1000000*60.0;
+      wheelturns = 0;
+      Serial.print("RPM: ");
+      Serial.println(rpm);
+      t0 = micros();
+    }
+    
 }
 
 /************************************************************************************************************

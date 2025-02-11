@@ -53,6 +53,10 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
+  Serial.print("Angle: ");
+  Serial.print(Theta_Final);
+  Serial.print(" Duty Cycle: ");
+  Serial.println((Theta_Final/45.0)*100);
 
 }
 
