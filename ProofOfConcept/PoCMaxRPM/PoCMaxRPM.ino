@@ -1,9 +1,11 @@
+#include <math.h>
+
 #define LEFT_MOTOR_FORWARD_PIN  A1
 #define LEFT_MOTOR_BACKWARD_PIN  A0
 #define RIGHT_MOTOR_FORWARD_PIN  A3
 #define RIGHT_MOTOR_BACKWARD_PIN  A2
 
-#define STEPPER_IR_SENSOR_PIN 6
+//#define STEPPER_IR_SENSOR_PIN 6
 
 int LEFT_MOTOR_PWM_SPEED = 0;
 int LEFT_MOTOR_DIR = 0;
@@ -13,10 +15,13 @@ int RIGHT_MOTOR_DIR = 0;
 unsigned long t0,t1;
 unsigned long wheelturns = 0;
 unsigned long rpm = 0;
+int maxRPM = 467;
+float RPMRequired = 0;
+int DCycle = 0;
 
-void RPM__ISR() {
+/*void RPM__ISR() {
   wheelturns++;
-}
+}*/
 
 void setup() {
 
@@ -27,9 +32,9 @@ void setup() {
     pinMode(LEFT_MOTOR_BACKWARD_PIN, OUTPUT);
     pinMode(RIGHT_MOTOR_FORWARD_PIN, OUTPUT);
     pinMode(RIGHT_MOTOR_BACKWARD_PIN, OUTPUT);
-    pinMode(STEPPER_IR_SENSOR_PIN, INPUT);
-    attachInterrupt(digitalPinToInterrupt(STEPPER_IR_SENSOR_PIN), RPM__ISR, RISING);
-    t0 = micros();
+    //pinMode(STEPPER_IR_SENSOR_PIN, INPUT);
+    //attachInterrupt(digitalPinToInterrupt(STEPPER_IR_SENSOR_PIN), RPM__ISR, RISING);
+    //t0 = micros();
 }
 
 /**************************************************************************************
@@ -66,7 +71,11 @@ void loop() {
       Serial.print(" MR_SPEED: ");
       Serial.print(RIGHT_MOTOR_PWM_SPEED);
       Serial.print(" MR_DIR: ");
-      Serial.println(RIGHT_MOTOR_DIR); 
+      Serial.print(RIGHT_MOTOR_DIR); 
+      Serial.print(" RPM: ");
+      Serial.print(RPMRequired);
+      Serial.print(" DC(%): ");
+      Serial.println(DCycle);
 
     }
     /*t1 = millis();
@@ -96,23 +105,35 @@ void controlWheelMotors(int LEFT_MOTOR_PWM_SPEED, int LEFT_MOTOR_DIR, int RIGHT_
 {
   if(LEFT_MOTOR_DIR == 0)
   {
-    analogWrite(LEFT_MOTOR_FORWARD_PIN, (LEFT_MOTOR_PWM_SPEED/100.0)*255.0);
+    analogWrite(LEFT_MOTOR_FORWARD_PIN, (calcMotorSpeed(LEFT_MOTOR_PWM_SPEED)/100.0)*255.0);
     analogWrite(LEFT_MOTOR_BACKWARD_PIN, 0);
   }
   else if(LEFT_MOTOR_DIR == 1)
   {
     analogWrite(LEFT_MOTOR_FORWARD_PIN, 0);
-    analogWrite(LEFT_MOTOR_BACKWARD_PIN, (LEFT_MOTOR_PWM_SPEED/100.0)*255.0);
+    analogWrite(LEFT_MOTOR_BACKWARD_PIN, (calcMotorSpeed(LEFT_MOTOR_PWM_SPEED)/100.0)*255.0);
   }
 
   if(RIGHT_MOTOR_DIR == 0)
   {
-    analogWrite(RIGHT_MOTOR_FORWARD_PIN, (RIGHT_MOTOR_PWM_SPEED/100.0)*255.0);
+    analogWrite(RIGHT_MOTOR_FORWARD_PIN, (calcMotorSpeed(RIGHT_MOTOR_PWM_SPEED)/100.0)*255.0);
     analogWrite(RIGHT_MOTOR_BACKWARD_PIN, 0);
   }
   else if(RIGHT_MOTOR_DIR == 1)
   {
     analogWrite(RIGHT_MOTOR_FORWARD_PIN, 0);
-    analogWrite(RIGHT_MOTOR_BACKWARD_PIN, (RIGHT_MOTOR_PWM_SPEED/100.0)*255.0);
+    analogWrite(RIGHT_MOTOR_BACKWARD_PIN, (calcMotorSpeed(RIGHT_MOTOR_PWM_SPEED)/100.0)*255.0);
   }
+}
+
+//Returns Duty Cycle needed for % of maxRPM
+int calcMotorSpeed(float percentMaxRPM)
+{
+  RPMRequired = (percentMaxRPM/100.0)*maxRPM;
+  DCycle = 5.34 - 0.0167*RPMRequired + 1.47*pow(10,-3)*pow(RPMRequired,2) - 6.82*pow(10,-6)*pow(RPMRequired,3) + 1.01*pow(10,-8)*pow(RPMRequired,4);
+  if(DCycle > 100)
+  {
+    DCycle = 100;
+  }
+  return DCycle;
 }
