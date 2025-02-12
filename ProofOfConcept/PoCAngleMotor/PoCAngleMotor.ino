@@ -60,7 +60,7 @@ void loop() {
   Serial.print("Angle: ");
   Serial.print(Theta_Final);
   Serial.print(" Duty Cycle: ");
-  Serial.println((Theta_Final/45.0)*100);
+  Serial.println(DCycle);
 
 }
 
