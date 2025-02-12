@@ -52,7 +52,6 @@ void setup() {
 
   readIMU.start(readIMUFunction);
   moveMotors.start(moveMotorsFunction);
-
 }
 
 void loop() {
@@ -61,7 +60,6 @@ void loop() {
   Serial.print(Theta_Final);
   Serial.print(" Duty Cycle: ");
   Serial.println(DCycle);
-
 }
 
 void readIMUFunction()
@@ -118,9 +116,9 @@ void moveMotorsFunction()
 }
 
 //Returns Duty Cycle needed for % of maxRPM
-int calcMotorSpeed(float percentMaxRPM)
+int calcMotorSpeed(float angleInput)
 {
-  RPMRequired = (percentMaxRPM/100.0)*maxRPM;
+  RPMRequired = (angleInput/100.0)*maxRPM;
   DCycle = 5.34 - 0.0167*RPMRequired + 1.47*pow(10,-3)*pow(RPMRequired,2) - 6.82*pow(10,-6)*pow(RPMRequired,3) + 1.01*pow(10,-8)*pow(RPMRequired,4);
   if(DCycle > 100)
   {
