@@ -26,6 +26,10 @@ float k = 0.6; //0.6 before
 
 float gx_0, gy_0, gz_0, ax_0,ay_0,az_0, x_0, x;
 
+int maxRPM = 467;
+float RPMRequired = 0;
+int DCycle = 0;
+
 /***************************************************************************************************
   positiveAngle from (0 Degrees to 90 Degrees) = 0% MAX RPM to 100% MAX RPM IN FORWARD DIRECTION
   negativeAngle from (0 Degrees to -90 Degrees) = 0% MAX RPM to 100% MAX RPM IN BACKWARD DIRECTION
@@ -94,21 +98,33 @@ void moveMotorsFunction()
     }
     else if(Theta_Final > 0 && Theta_Final <= 45)
     {
-      analogWrite(LEFT_MOTOR_FORWARD_PIN, (Theta_Final/45.0)*255.0);
+      analogWrite(LEFT_MOTOR_FORWARD_PIN, (calcMotorSpeed((Theta_Final/45.0)*100.0)/100.0)*255.0);
       analogWrite(LEFT_MOTOR_BACKWARD_PIN, 0);
-      analogWrite(RIGHT_MOTOR_FORWARD_PIN, (Theta_Final/45.0)*255.0);
+      analogWrite(RIGHT_MOTOR_FORWARD_PIN, (calcMotorSpeed((Theta_Final/45.0)*100.0)/100.0)*255.0);
       analogWrite(RIGHT_MOTOR_BACKWARD_PIN, 0);
     }
     else if(Theta_Final < 0 && Theta_Final >= -45)
     {
       analogWrite(LEFT_MOTOR_FORWARD_PIN, 0);
-      analogWrite(LEFT_MOTOR_BACKWARD_PIN, -(Theta_Final/45.0)*255.0);
+      analogWrite(LEFT_MOTOR_BACKWARD_PIN, (calcMotorSpeed((-Theta_Final/45.0)*100.0)/100.0)*255.0);
       analogWrite(RIGHT_MOTOR_FORWARD_PIN, 0);
-      analogWrite(RIGHT_MOTOR_BACKWARD_PIN, -(Theta_Final/45.0)*255.0);
+      analogWrite(RIGHT_MOTOR_BACKWARD_PIN, (calcMotorSpeed((-Theta_Final/45.0)*100.0)/100.0)*255.0);
     }
     else
     {
       //If angle is past the +- 45 degrees then just keep the current speed (should be max RPM technically)
     }
   }
+}
+
+//Returns Duty Cycle needed for % of maxRPM
+int calcMotorSpeed(float percentMaxRPM)
+{
+  RPMRequired = (percentMaxRPM/100.0)*maxRPM;
+  DCycle = 5.34 - 0.0167*RPMRequired + 1.47*pow(10,-3)*pow(RPMRequired,2) - 6.82*pow(10,-6)*pow(RPMRequired,3) + 1.01*pow(10,-8)*pow(RPMRequired,4);
+  if(DCycle > 100)
+  {
+    DCycle = 100;
+  }
+  return 5 + DCycle;
 }
