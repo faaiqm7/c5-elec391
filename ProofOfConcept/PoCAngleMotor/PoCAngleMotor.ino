@@ -63,7 +63,7 @@ void loop() {
   Serial.print(" DC_L(%): ");
   Serial.print(DCycleLeft);
   Serial.print(" DC_R(%): ");
-  Serial.print(DCycleRight);
+  Serial.println(DCycleRight);
 }
 
 void readIMUFunction()

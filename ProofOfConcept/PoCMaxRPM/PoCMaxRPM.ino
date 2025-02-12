@@ -1,9 +1,9 @@
 #include <math.h>
 
-#define LEFT_MOTOR_FORWARD_PIN  A1
-#define LEFT_MOTOR_BACKWARD_PIN  A0
-#define RIGHT_MOTOR_FORWARD_PIN  A3
-#define RIGHT_MOTOR_BACKWARD_PIN  A2
+#define LEFT_MOTOR_FORWARD_PIN  A3
+#define LEFT_MOTOR_BACKWARD_PIN  A2
+#define RIGHT_MOTOR_FORWARD_PIN  A1
+#define RIGHT_MOTOR_BACKWARD_PIN  A0
 
 //#define STEPPER_IR_SENSOR_PIN 6
 
@@ -80,7 +80,7 @@ void loop() {
       Serial.print(" DC_L(%): ");
       Serial.print(DCycleLeft);
       Serial.print(" DC_R(%): ");
-      Serial.print(DCycleRight);
+      Serial.println(DCycleRight);
 
     }
     /*t1 = millis();
