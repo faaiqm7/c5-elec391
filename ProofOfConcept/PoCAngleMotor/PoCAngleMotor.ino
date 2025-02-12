@@ -91,7 +91,7 @@ void moveMotorsFunction()
 {
   while(true)
   {
-    if(Theta_Final == 0)
+    if(Theta_Final < 3 && Theta_Final > -3)
     {
       analogWrite(LEFT_MOTOR_FORWARD_PIN, 0);
       analogWrite(LEFT_MOTOR_BACKWARD_PIN, 0);
