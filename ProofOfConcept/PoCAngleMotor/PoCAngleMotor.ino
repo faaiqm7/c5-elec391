@@ -29,6 +29,8 @@ float gx_0, gy_0, gz_0, ax_0,ay_0,az_0, x_0, x;
 int maxRPM = 467;
 float RPMRequired = 0;
 int DCycle = 0;
+int DCycleLeft = 0;
+int DCycleRight = 0;
 
 /***************************************************************************************************
   positiveAngle from (0 Degrees to 90 Degrees) = 0% MAX RPM to 100% MAX RPM IN FORWARD DIRECTION
@@ -93,20 +95,27 @@ void moveMotorsFunction()
       analogWrite(LEFT_MOTOR_BACKWARD_PIN, 0);
       analogWrite(RIGHT_MOTOR_FORWARD_PIN, 0);
       analogWrite(RIGHT_MOTOR_BACKWARD_PIN, 0);
+      DCycleLeft = 0;
+      DCycleRight = 0;
+  
     }
     else if(Theta_Final > 0 && Theta_Final <= 45)
     {
       analogWrite(LEFT_MOTOR_FORWARD_PIN, (calcMotorSpeed((Theta_Final/45.0)*100.0)/100.0)*255.0);
       analogWrite(LEFT_MOTOR_BACKWARD_PIN, 0);
+      DCycleLeft = DCycle;
       analogWrite(RIGHT_MOTOR_FORWARD_PIN, (calcMotorSpeed((Theta_Final/45.0)*100.0)/100.0)*255.0);
       analogWrite(RIGHT_MOTOR_BACKWARD_PIN, 0);
+      DCycleRight = DCycle;
     }
     else if(Theta_Final < 0 && Theta_Final >= -45)
     {
       analogWrite(LEFT_MOTOR_FORWARD_PIN, 0);
       analogWrite(LEFT_MOTOR_BACKWARD_PIN, (calcMotorSpeed((-Theta_Final/45.0)*100.0)/100.0)*255.0);
+      DCycleLeft = DCycle;
       analogWrite(RIGHT_MOTOR_FORWARD_PIN, 0);
       analogWrite(RIGHT_MOTOR_BACKWARD_PIN, (calcMotorSpeed((-Theta_Final/45.0)*100.0)/100.0)*255.0);
+      DCycleRight = DCycle;
     }
     else
     {

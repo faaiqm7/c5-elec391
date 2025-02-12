@@ -18,6 +18,8 @@ unsigned long rpm = 0;
 int maxRPM = 467;
 float RPMRequired = 0;
 int DCycle = 0;
+int DCycleLeft = 0;
+int DCycleRight = 0;
 
 /*void RPM__ISR() {
   wheelturns++;
@@ -71,7 +73,7 @@ void loop() {
       Serial.print(" MR_SPEED: ");
       Serial.print(RIGHT_MOTOR_PWM_SPEED);
       Serial.print(" MR_DIR: ");
-      Serial.print(RIGHT_MOTOR_DIR); 
+      Serial.println(RIGHT_MOTOR_DIR); 
 
       /*Serial.print(" RPM: ");
       Serial.print(RPMRequired);
@@ -108,22 +110,26 @@ void controlWheelMotors(int LEFT_MOTOR_PWM_SPEED, int LEFT_MOTOR_DIR, int RIGHT_
   {
     analogWrite(LEFT_MOTOR_FORWARD_PIN, (calcMotorSpeed(LEFT_MOTOR_PWM_SPEED)/100.0)*255.0);
     analogWrite(LEFT_MOTOR_BACKWARD_PIN, 0);
+    DCycleLeft = DCycle;
   }
   else if(LEFT_MOTOR_DIR == 1)
   {
     analogWrite(LEFT_MOTOR_FORWARD_PIN, 0);
     analogWrite(LEFT_MOTOR_BACKWARD_PIN, (calcMotorSpeed(LEFT_MOTOR_PWM_SPEED)/100.0)*255.0);
+    DCycleLeft = DCycle;
   }
 
   if(RIGHT_MOTOR_DIR == 0)
   {
     analogWrite(RIGHT_MOTOR_FORWARD_PIN, (calcMotorSpeed(RIGHT_MOTOR_PWM_SPEED)/100.0)*255.0);
     analogWrite(RIGHT_MOTOR_BACKWARD_PIN, 0);
+    DCycleRight = DCycle;
   }
   else if(RIGHT_MOTOR_DIR == 1)
   {
     analogWrite(RIGHT_MOTOR_FORWARD_PIN, 0);
     analogWrite(RIGHT_MOTOR_BACKWARD_PIN, (calcMotorSpeed(RIGHT_MOTOR_PWM_SPEED)/100.0)*255.0);
+    DCycleRight = DCycle;
   }
 }
 
