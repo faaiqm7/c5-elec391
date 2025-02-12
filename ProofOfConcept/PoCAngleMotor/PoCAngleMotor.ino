@@ -135,5 +135,5 @@ int calcMotorSpeed(float angleInput)
   {
     DCycle = 100;
   }
-  return 5 + DCycle;
+  return 7 + DCycle;
 }
