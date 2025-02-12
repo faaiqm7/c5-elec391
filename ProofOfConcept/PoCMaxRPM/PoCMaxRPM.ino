@@ -73,12 +73,14 @@ void loop() {
       Serial.print(" MR_SPEED: ");
       Serial.print(RIGHT_MOTOR_PWM_SPEED);
       Serial.print(" MR_DIR: ");
-      Serial.println(RIGHT_MOTOR_DIR); 
+      Serial.print(RIGHT_MOTOR_DIR); 
 
       /*Serial.print(" RPM: ");
-      Serial.print(RPMRequired);
-      Serial.print(" DC(%): ");
-      Serial.println(DCycle);*/
+      Serial.print(RPMRequired);*/
+      Serial.print(" DC_L(%): ");
+      Serial.print(DCycleLeft);
+      Serial.print(" DC_R(%): ");
+      Serial.print(DCycleRight);
 
     }
     /*t1 = millis();

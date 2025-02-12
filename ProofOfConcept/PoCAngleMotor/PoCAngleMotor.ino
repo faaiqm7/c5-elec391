@@ -60,8 +60,10 @@ void loop() {
   // put your main code here, to run repeatedly:
   Serial.print("Angle: ");
   Serial.print(Theta_Final);
-  Serial.print(" Duty Cycle: ");
-  Serial.println(DCycle);
+  Serial.print(" DC_L(%): ");
+  Serial.print(DCycleLeft);
+  Serial.print(" DC_R(%): ");
+  Serial.print(DCycleRight);
 }
 
 void readIMUFunction()
