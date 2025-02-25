@@ -103,8 +103,7 @@ void initializeALL() {
 
   if (!IMU.begin()) {
     Serial.println("Failed to initialize IMU!");
-    while (1)
-      ;
+    while (1);
   }
 
   if (!BLE.begin()) {

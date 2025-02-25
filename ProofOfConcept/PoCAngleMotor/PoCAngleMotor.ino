@@ -120,7 +120,7 @@ void moveMotorsFunction()
       DCycleRight = DCycle;
     }
     else
-    {
+           {
       //If angle is past the +- 45 degrees then just keep the current speed (should be max RPM technically)
     }
   }
