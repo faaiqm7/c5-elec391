@@ -75,10 +75,6 @@ void loop() {
     kd = input.substring(0, input.indexOf(' ')).toFloat();
     input = input.substring(input.indexOf(' ') + 1);
     resetIntegral = input.substring(0, input.indexOf(' ')).toInt();
-    input = input.substring(input.indexOf('-'));
-    PID_MIN = input.substring(0, input.indexOf(' ')).toInt();
-    input = input.substring(input.indexOf(' ') + 1);
-    PID_MAX = input.substring(0, input.indexOf(' ')).toInt();
     input = input.substring(input.indexOf(' ') + 1);
     DEAD_ZONE_POSITIVE = input.substring(0, input.indexOf(' ')).toFloat();
     input = input.substring(input.indexOf('-'));
