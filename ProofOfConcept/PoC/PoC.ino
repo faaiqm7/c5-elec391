@@ -27,7 +27,7 @@ void setup() {
     pinMode(LEFT_MOTOR_BACKWARD_PIN, OUTPUT);
     pinMode(RIGHT_MOTOR_FORWARD_PIN, OUTPUT);
     pinMode(RIGHT_MOTOR_BACKWARD_PIN, OUTPUT);
-    pinMode(STEPPER_IR_SENSOR_PIN, INPUT);
+    //pinMode(STEPPER_IR_SENSOR_PIN, INPUT);
     //attachInterrupt(digitalPinToInterrupt(STEPPER_IR_SENSOR_PIN), RPM__ISR, RISING);
     //t0 = micros();
 }
