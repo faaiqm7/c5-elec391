@@ -12,8 +12,9 @@ import io
 
 # Define the BLE UUIDs
 laptop_master_service_uuid = "00000000-5EC4-4083-81CD-A10B8D5CF6EC"
-laptop_master_characteristic_uuid = "00000001-5EC4-4083-81CD-A10B8D5CF6EC"
+laptop_master_characteristic_angle_uuid = "00000001-5EC4-4083-81CD-A10B8D5CF6EC"
 laptop_master_send_characteristic_uuid = "00000002-5EC4-4083-81CD-A10B8D5CF6EC"
+laptop_master_send_characteristic_pidoutput_uuid = "00000003-5EC4-4083-81CD-A10B8D5CF6EC"
 
 # The name of the Arduino device
 arduino_device_name = "C5-BLE"  # Replace with your Arduino device name
@@ -23,10 +24,9 @@ client = None
 ble_loop = None
 
 # Speed variables
-Forward_Speed = 0
-Back_Speed = 0
-Left_Speed = 0
-Right_Speed = 0
+Kp = 0
+Ki = 0
+Kd = 0
 
 # Throttle BLE messages
 last_sent_time = 0
@@ -36,69 +36,54 @@ send_interval = 0.1  # Minimum time between BLE sends (100ms)
 angles = []  # List to store received angles
 time_stamps = []  # List to store time of each angle reading
 
-
 def send_ble_command():
     global last_sent_time
     current_time = time.time()
     if current_time - last_sent_time >= send_interval:
         last_sent_time = current_time
         if client and ble_loop:
-            command = f"L:{Left_Speed} R:{Right_Speed} F:{Forward_Speed} B:{Back_Speed}"
+            command = f"Kp:{Kp} Ki:{Ki} Kd:{Kd} RI:{1}"
             test_str_bytes = bytearray(command, encoding="utf-8")
             asyncio.run_coroutine_threadsafe(
                 client.write_gatt_char(laptop_master_send_characteristic_uuid, test_str_bytes, response=True),
                 ble_loop
             )
-            print(f"{command}")
+            # print(f"{command}")
 
 def on_press(key):
-    global Forward_Speed, Back_Speed, Left_Speed, Right_Speed
+    global Kp, Ki, Kd
     try:
-        if key.char == 'w':
-            Forward_Speed += 1
-            if(Forward_Speed >= 100):
-                Forward_Speed = 100
-        elif key.char == 's':
-            Back_Speed += 1
-            if(Back_Speed >= 100):
-                Back_Speed = 100
+        if key.char == 'q':
+            Kp += 1
         elif key.char == 'a':
-            Left_Speed += 1
-            if(Left_Speed >= 100):
-                Left_Speed = 100
+            Kp -= 1
+        elif key.char == 'w':
+            Ki += 1
+        elif key.char == 's':
+            Ki -= 1
+        elif key.char == 'e':
+            Kd += 1
         elif key.char == 'd':
-            Right_Speed += 1
-            if(Right_Speed >= 100):
-                Right_Speed = 100
+            Kd -= 1
         send_ble_command()
     except AttributeError:
         pass
 
-def on_release(key):
-    global Forward_Speed, Back_Speed, Left_Speed, Right_Speed
-    try:
-        if key.char == 'w':
-            Forward_Speed = 0
-        elif key.char == 's':
-            Back_Speed = 0
-        elif key.char == 'a':
-            Left_Speed = 0
-        elif key.char == 'd':
-            Right_Speed = 0
-        send_ble_command()
-    except AttributeError:
-        pass
+def on_button_click(input):
+    global Kp, Ki, Kd
+    if input == "KpPlus":
+        Kp += 1
+    elif input == "KpMinus":
+        Kp -= 1
+    elif input == "KiPlus":
+        Ki += 1
+    elif input == "KiMinus":
+        Ki -= 1
+    elif input == "KdPlus":
+        Kd += 1
+    elif input == "KdMinus":
+        Kd -= 1
 
-def on_button_click(direction):
-    global Forward_Speed, Back_Speed, Left_Speed, Right_Speed
-    if direction == "Forward":
-        Forward_Speed += 1
-    elif direction == "Back":
-        Back_Speed += 1
-    elif direction == "Left":
-        Left_Speed += 1
-    elif direction == "Right":
-        Right_Speed += 1
     send_ble_command()
 
 async def run_ble():
@@ -116,13 +101,15 @@ async def run_ble():
         print(f"Connected to {arduino_device_name}\n")
         while True:
             try:
-                valueReceived = await client.read_gatt_char(laptop_master_characteristic_uuid)
-                valueReceived = valueReceived.decode('utf-8')
-                print(f"{valueReceived} Degrees")
+                angleReceived = await client.read_gatt_char(laptop_master_characteristic_angle_uuid)
+                angleReceived = angleReceived.decode('utf-8')
+                pidOutput = await client.read_gatt_char(laptop_master_send_characteristic_pidoutput_uuid)
+                pidOutput = pidOutput.decode('utf-8')
+                print(f"Tilt: {angleReceived}° PID Output: {pidOutput}")
 
                 # Update angle data for plotting
                 current_time = time.time()
-                angles.append(float(valueReceived))
+                angles.append(float(angleReceived))
                 time_stamps.append(current_time)
 
                 # Limit the number of points in the plot to avoid memory issues
@@ -164,7 +151,7 @@ ble_thread = threading.Thread(target=start_ble_loop, daemon=True)
 ble_thread.start()
 
 # Start listening to keyboard inputs
-listener = keyboard.Listener(on_press=on_press, on_release=on_release)
+listener = keyboard.Listener(on_press=on_press)
 listener.start()
 
 # Create the CustomTkinter GUI
@@ -202,41 +189,59 @@ canvas = FigureCanvasTkAgg(fig, master=plot_frame)
 canvas.get_tk_widget().pack(fill="both", expand=True)
 
 # Add control buttons
-button_forward = ctk.CTkButton(root, 
-                               text="Forward", 
+KpPlus = ctk.CTkButton(root, 
+                               text="Kp+", 
                                width=60, 
                                fg_color="#CD0000", 
                                hover_color="#9C0000", 
                                text_color="white", 
-                               command=lambda: on_button_click("Forward"))
-button_forward.place(relx=0.1, rely=0.575, anchor="center")
+                               command=lambda: on_button_click("KpPlus"))
+KpPlus.place(relx=0.05, rely=0.575, anchor="center")
 
-button_back = ctk.CTkButton(root, 
-                            text="Back", 
+KpMinus = ctk.CTkButton(root, 
+                            text="Kp-", 
                             width=60, 
                             fg_color="#CD0000", 
                             hover_color="#9C0000", 
                             text_color="white", 
-                            command=lambda: on_button_click("Back"))
-button_back.place(relx=0.1, rely=0.625, anchor="center")
+                            command=lambda: on_button_click("KpMinus"))
+KpMinus.place(relx=0.05, rely=0.625, anchor="center")
 
-button_left = ctk.CTkButton(root, 
-                            text="Left", 
+KiPlus = ctk.CTkButton(root, 
+                            text="Ki+", 
                             width=60, 
                             fg_color="#CD0000", 
                             hover_color="#9C0000", 
                             text_color="white", 
-                            command=lambda: on_button_click("Left"))
-button_left.place(relx=0.05, rely=0.625, anchor="center")
+                            command=lambda: on_button_click("KiPlus"))
+KiPlus.place(relx=0.1, rely=0.575, anchor="center")
 
-button_right = ctk.CTkButton(root, 
-                             text="Right", 
+KiMinus = ctk.CTkButton(root, 
+                             text="Ki-", 
                              width=60, 
                              fg_color="#CD0000", 
                              hover_color="#9C0000", 
                              text_color="white", 
-                             command=lambda: on_button_click("Right"))
-button_right.place(relx=0.15, rely=0.625, anchor="center")
+                             command=lambda: on_button_click("KiMinus"))
+KiMinus.place(relx=0.1, rely=0.625, anchor="center")
+
+KdPlus = ctk.CTkButton(root, 
+                            text="Kd+", 
+                            width=60, 
+                            fg_color="#CD0000", 
+                            hover_color="#9C0000", 
+                            text_color="white", 
+                            command=lambda: on_button_click("KdPlus"))
+KdPlus.place(relx=0.15, rely=0.575, anchor="center")
+
+KiMinus = ctk.CTkButton(root, 
+                             text="Kd-", 
+                             width=60, 
+                             fg_color="#CD0000", 
+                             hover_color="#9C0000", 
+                             text_color="white", 
+                             command=lambda: on_button_click("KdMinus"))
+KiMinus.place(relx=0.15, rely=0.625, anchor="center")
 
 label = ctk.CTkLabel(root, text="C5-Robot", font=("Roboto", 40))
 label.place(relx=0.1, rely=0.1, anchor="center")
@@ -267,6 +272,7 @@ class TerminalRedirector(io.StringIO):
 
 # Set up terminal redirection
 sys.stdout = TerminalRedirector(terminal)
+
 
 # Create a white background frame for the angle label
 angle_frame = ctk.CTkFrame(root, width=160, height=50, fg_color="white", border_width=2, border_color="#9A0000")

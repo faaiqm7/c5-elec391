@@ -93,10 +93,7 @@ void setup() {
 }
 
 void loop() {
-  Serial.print("Stepper Angle: ");
-  Serial.print(stepper_angle);
-  Serial.print(" Distance Sensor: ");
-  Serial.println(distanceSensed);
+
 }
 
 void initializeALL() {
@@ -125,18 +122,18 @@ void initializeALL() {
   BLE.advertise();
   connectToMasterLaptop();
 
-  pinMode(STEPPER_PIN_1, OUTPUT);
-  pinMode(STEPPER_PIN_2, OUTPUT);
-  pinMode(STEPPER_PIN_3, OUTPUT);
-  pinMode(STEPPER_PIN_4, OUTPUT);
-  pinMode(STEPPER_IR_SENSOR_PIN, INPUT);
-  stepperHoming(); //Initialize Angle 0;
+  //pinMode(STEPPER_PIN_1, OUTPUT);
+  //pinMode(STEPPER_PIN_2, OUTPUT);
+  //pinMode(STEPPER_PIN_3, OUTPUT);
+  //pinMode(STEPPER_PIN_4, OUTPUT);
+  //pinMode(STEPPER_IR_SENSOR_PIN, INPUT);
+  //stepperHoming(); //Initialize Angle 0;
 
   readIMUFunction.start(readIMUData);
-  rotateStepperFunction.start(rotateStepper);
-  distanceSensorFunction.start(readDistanceSensor);
+  //rotateStepperFunction.start(rotateStepper);
+  //distanceSensorFunction.start(readDistanceSensor);
   BLEReceiveSendFunction.start(Robot2MasterSendReceive);
-  PIDFunction.start(PID);
+  //PIDFunction.start(PID);
   time_0 = millis(); //We initialize it here because we want dt to be based of right when PID starts.
 }
 
