@@ -32,8 +32,8 @@ float pi = 3.1415;
 
 int resetIntegral = 0;
 
-int PID_MIN = -30;
-int PID_MAX = 30;
+int PID_MIN = 0;
+int PID_MAX = 0;
 
 int LEFT_FORWARD_OFFSET = 22;
 int LEFT_BACKWARD_OFFSET = 22;
@@ -42,6 +42,11 @@ int RIGHT_BACKWARD_OFFSET = 22;
 
 float DEAD_ZONE_POSITIVE = 0;
 float DEAD_ZONE_NEGATIVE = 0;
+
+float MAX_TILT = 40; //degrees
+float MAX_KP = 0;
+float MAX_KI = 0;
+float MAX_KD = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -56,9 +61,6 @@ void setup() {
   pinMode(LEFT_MOTOR_BACKWARD_PIN, OUTPUT);
   pinMode(RIGHT_MOTOR_FORWARD_PIN, OUTPUT);
   pinMode(RIGHT_MOTOR_BACKWARD_PIN, OUTPUT);
-
-  //readIMUFunction.start(readIMUData);
-  //PIDFunction.start(PID);
 
 }
 
@@ -80,14 +82,16 @@ void loop() {
     input = input.substring(input.indexOf('-'));
     DEAD_ZONE_NEGATIVE = input.substring(0, input.indexOf(' ')).toFloat();
 
+    MAX_KP = kp*(MAX_TILT*pi/180);
+    MAX_KI = ki*pow((MAX_TILT*pi/180),2)/2;
+    MAX_KD = kd*(1.0/0.01)*(pi/180);
+
     Serial.print("Kp: ");
     Serial.print(kp);
     Serial.print(" Ki: ");
     Serial.print(ki);
     Serial.print(" Kd: ");
     Serial.print(kd);
-    Serial.print(" P_MIN: ");
-    Serial.print(PID_MIN);
   }
   if(resetIntegral == 1)
   {
@@ -103,6 +107,7 @@ void loop() {
 void readIMUData() {
   if (IMU.gyroscopeAvailable() && IMU.accelerationAvailable()) {
 
+    t1 = millis();
     IMU.readGyroscope(gy_0, gx_0, gz_0);
     IMU.readAcceleration(ay_0, ax_0, az_0);
 
@@ -110,15 +115,16 @@ void readIMUData() {
     Theta_Gyro = gy_0*0.01 + Theta_Final;
 
     Theta_Final = (Theta_Gyro)*k + Theta_Acc * (1 - k);
+    
 
     PID();
+    t0 = t1;
   }
 }
 
 void PID()
 {
 
-    t1 = millis();
     dt = (float)(t1 - t0)/1000.0;
     //Kp, Ki, and Kd are choosen for radians not for degrees.
     //et_new is in radians not degrees
@@ -126,47 +132,25 @@ void PID()
     et_new = (desired_angle - Theta_Final)*pi/180.0;
     kp_et = kp*et_new;
 
-    et_integral += et_new;
-    //et_integral = constrain(et_integral, -1.0*pi/4.0, pi/4.0); //Constrain the integral error sum to not exceed 45 degrees.
-    ki_et = ki*(et_integral)*dt;
+    et_integral += et_new*(float)dt;
+    ki_et = ki*et_integral;
     
     et_derivative = (et_new - et_old) / ((float)dt);
     kd_et = kd * et_derivative;
 
-    PID_OUTPUT = (kp_et + ki_et - kd_et);
-    PID_OUTPUT = constrain(PID_OUTPUT, -255, 255);
+    PID_OUTPUT = (kp_et + ki_et + kd_et)/(MAX_KP + MAX_KI + MAX_KD);
 
-    if(Theta_Final > DEAD_ZONE_POSITIVE)
+    //PID_OUTPUT = constrain(PID_OUTPUT, -100, 100);
+
+    if(PID_OUTPUT <= 0.00)
     {
-
-      //NOTE TO SELF: PLAY AROUND WITH the not ground the other PWM pin when going forward or backward, etc.
-
       //PID_OUT will be negative (mostly)
-      controlWheelMotors(abs(PID_OUTPUT), 0, abs(PID_OUTPUT), 0);
+      controlWheelMotors(abs(PID_OUTPUT*(255 - 38.25)) + 10 , 0, (abs(PID_OUTPUT*(255 - 38.25)) + 10), 0);
     }
-    else if(Theta_Final < DEAD_ZONE_NEGATIVE)
+    else if(PID_OUTPUT >= 0.00)
     {
       //Theta < 0, PID_OUT will be positive (mostly)
-      controlWheelMotors(PID_OUTPUT, 1, PID_OUTPUT, 1);
-    }
-    else if(Theta_Final < DEAD_ZONE_POSITIVE && Theta_Final >= 0 && et_derivative < 0)
-    {
-      //Fast Decay Stop when Theta hits close to 0 degrees from the positive side
-
-
-      analogWrite(LEFT_MOTOR_FORWARD_PIN, 0);
-      analogWrite(LEFT_MOTOR_BACKWARD_PIN, LEFT_BACKWARD_OFFSET + PID_MIN);
-      analogWrite(RIGHT_MOTOR_FORWARD_PIN, 0);
-      analogWrite(RIGHT_MOTOR_BACKWARD_PIN, RIGHT_BACKWARD_OFFSET + PID_MIN);
-    }
-    else if(Theta_Final > DEAD_ZONE_NEGATIVE && Theta_Final <= 0 && et_derivative > 0)
-    {
-      //Fast Decay Stop when Theta hits close to 0 degrees from the negative side
-
-      analogWrite(LEFT_MOTOR_FORWARD_PIN, LEFT_FORWARD_OFFSET + PID_MIN);
-      analogWrite(LEFT_MOTOR_BACKWARD_PIN, 0);
-      analogWrite(RIGHT_MOTOR_FORWARD_PIN, RIGHT_FORWARD_OFFSET + PID_MIN);
-      analogWrite(RIGHT_MOTOR_BACKWARD_PIN, 0);
+      controlWheelMotors((PID_OUTPUT*(255 - 38.25) + 10), 1, (PID_OUTPUT*(255 - 38.25) + 10), 1);
     }
 
     Serial.print(kp_et, 0);
@@ -176,16 +160,13 @@ void PID()
     Serial.print(kd_et,2);
 
     Serial.print(" ");
-    Serial.print(PID_OUTPUT, 0);
+    Serial.print(PID_OUTPUT, 5);
     Serial.print(" ");
     Serial.print(Theta_Final, 1);
     Serial.println(" ");
 
 
     et_old = et_new;
-    t0 = t1;
-    //ThisThread::sleep_for(5ms);
-  
 }
 
 /************************************************************************************************************
@@ -199,23 +180,23 @@ void controlWheelMotors(int LEFT_MOTOR_PWM_SPEED, int LEFT_MOTOR_DIR, int RIGHT_
 {
   if(LEFT_MOTOR_DIR == 0)
   {
-    analogWrite(LEFT_MOTOR_FORWARD_PIN, LEFT_FORWARD_OFFSET + PID_MIN + LEFT_MOTOR_PWM_SPEED);
-    analogWrite(LEFT_MOTOR_BACKWARD_PIN, 0);
+    analogWrite(LEFT_MOTOR_FORWARD_PIN, LEFT_FORWARD_OFFSET + LEFT_MOTOR_PWM_SPEED);
+    analogWrite(LEFT_MOTOR_BACKWARD_PIN, LEFT_BACKWARD_OFFSET);
   }
   else if(LEFT_MOTOR_DIR == 1)
   {
-    analogWrite(LEFT_MOTOR_FORWARD_PIN, 0);
-    analogWrite(LEFT_MOTOR_BACKWARD_PIN, LEFT_BACKWARD_OFFSET + PID_MIN + LEFT_MOTOR_PWM_SPEED);
+    analogWrite(LEFT_MOTOR_FORWARD_PIN, LEFT_FORWARD_OFFSET);
+    analogWrite(LEFT_MOTOR_BACKWARD_PIN, LEFT_BACKWARD_OFFSET + LEFT_MOTOR_PWM_SPEED);
   }
 
   if(RIGHT_MOTOR_DIR == 0)
   {
-    analogWrite(RIGHT_MOTOR_FORWARD_PIN, RIGHT_FORWARD_OFFSET + PID_MIN + RIGHT_MOTOR_PWM_SPEED);
-    analogWrite(RIGHT_MOTOR_BACKWARD_PIN, 0);
+    analogWrite(RIGHT_MOTOR_FORWARD_PIN, RIGHT_FORWARD_OFFSET + RIGHT_MOTOR_PWM_SPEED);
+    analogWrite(RIGHT_MOTOR_BACKWARD_PIN, RIGHT_BACKWARD_OFFSET);
   }
   else if(RIGHT_MOTOR_DIR == 1)
   {
-    analogWrite(RIGHT_MOTOR_FORWARD_PIN, 0);
-    analogWrite(RIGHT_MOTOR_BACKWARD_PIN, RIGHT_BACKWARD_OFFSET + PID_MIN + RIGHT_MOTOR_PWM_SPEED);
+    analogWrite(RIGHT_MOTOR_FORWARD_PIN, RIGHT_FORWARD_OFFSET);
+    analogWrite(RIGHT_MOTOR_BACKWARD_PIN, RIGHT_BACKWARD_OFFSET + RIGHT_MOTOR_PWM_SPEED);
   }
 }
