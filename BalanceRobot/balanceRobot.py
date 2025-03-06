@@ -14,7 +14,7 @@ import io
 laptop_master_service_uuid = "00000000-5EC4-4083-81CD-A10B8D5CF6EC"
 laptop_master_characteristic_angle_uuid = "00000001-5EC4-4083-81CD-A10B8D5CF6EC"
 laptop_master_send_characteristic_uuid = "00000002-5EC4-4083-81CD-A10B8D5CF6EC"
-laptop_master_send_characteristic_pidoutput_uuid = "00000003-5EC4-4083-81CD-A10B8D5CF6EC"
+laptop_master_characteristic_pidoutput_uuid = "00000003-5EC4-4083-81CD-A10B8D5CF6EC"
 
 # The name of the Arduino device
 arduino_device_name = "C5-BLE"  # Replace with your Arduino device name
@@ -34,6 +34,7 @@ send_interval = 0.1  # Minimum time between BLE sends (100ms)
 
 # Angle Data for Live Plotting
 angles = []  # List to store received angles
+PIDouts = [] # List to store PID outputs
 time_stamps = []  # List to store time of each angle reading
 
 def send_ble_command():
@@ -48,7 +49,7 @@ def send_ble_command():
                 client.write_gatt_char(laptop_master_send_characteristic_uuid, test_str_bytes, response=True),
                 ble_loop
             )
-            # print(f"{command}")
+            print(f"{command}")
 
 def on_press(key):
     global Kp, Ki, Kd
@@ -87,7 +88,7 @@ def on_button_click(input):
     send_ble_command()
 
 async def run_ble():
-    global client, ble_loop, angles, time_stamps
+    global client, ble_loop, angles, time_stamps, PIDouts
     ble_loop = asyncio.get_running_loop()
     devices = await BleakScanner.discover()
     arduino_device = next((device for device in devices if device.name == arduino_device_name), None)
@@ -103,24 +104,29 @@ async def run_ble():
             try:
                 angleReceived = await client.read_gatt_char(laptop_master_characteristic_angle_uuid)
                 angleReceived = angleReceived.decode('utf-8')
-                pidOutput = await client.read_gatt_char(laptop_master_send_characteristic_pidoutput_uuid)
+                pidOutput = await client.read_gatt_char(laptop_master_characteristic_pidoutput_uuid)
                 pidOutput = pidOutput.decode('utf-8')
-                print(f"Tilt: {angleReceived}° PID Output: {pidOutput}")
+                #print(f"Tilt: {angleReceived}° PID Output: {pidOutput}")
+                # print(f"Tilt: {angleReceived}°")
 
                 # Update angle data for plotting
                 current_time = time.time()
                 angles.append(float(angleReceived))
+                PIDouts.append(float(pidOutput))
                 time_stamps.append(current_time)
 
                 # Limit the number of points in the plot to avoid memory issues
                 if len(angles) > 100:
                     angles.pop(0)
                     time_stamps.pop(0)
+                if len(PIDouts) > 100:
+                    PIDouts.pop(0)
 
                 update_plot()
 
                 # Update the angle label
                 update_angle_label()
+                update_pidoutput_label()
 
                 await asyncio.sleep(0.01)
             except Exception as e:
@@ -282,11 +288,27 @@ angle_frame.place(relx=0.1, rely=0.45, anchor="center")
 angle_label = ctk.CTkLabel(angle_frame, text="Angle: 0°", font=("Roboto", 24))
 angle_label.place(relx=0.5, rely=0.5, anchor="center")  # Center the label inside the frame
 
+# Create a white background frame for the pidoutput label
+pidoutput_frame = ctk.CTkFrame(root, width=240, height=50, fg_color="white", border_width=2, border_color="#9A0000")
+pidoutput_frame.place(relx=0.1, rely=0.75, anchor="center")
+
+# Create the pidoutput label inside the frame
+pidoutput_label = ctk.CTkLabel(pidoutput_frame, text="PID: ", font=("Roboto", 24))
+pidoutput_label.place(relx=0.5, rely=0.5, anchor="center")  # Center the label inside the frame
+
+
 # Update the angle label with the latest value
 def update_angle_label():
     global angles
     if angles:
         latest_angle = angles[-1]
         angle_label.configure(text=f"Angle: {latest_angle:.2f}°")
+
+# Update the pidoutput label with the latest value
+def update_pidoutput_label():
+    global PIDouts
+    if PIDouts:
+        latest_PID = PIDouts[-1]
+        pidoutput_label.configure(text=f"PID: {latest_PID:.4f}")
 
 root.mainloop()

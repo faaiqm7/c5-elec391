@@ -1,4 +1,4 @@
-#include <mbed.h>
+#include <ArduinoBLE.h>
 #include "Arduino_BMI270_BMM150.h"
 #include <math.h>
 
@@ -26,7 +26,7 @@ float kp = 0.01; //Proportional
 float ki = 0; //Integral
 float kd = 0; //Derivative
 float desired_angle = 0; //We always want the robot to be at a 0 degree pitch (angle about the y-axis)
-float dt, t0,t1;
+float dt, t0,t1,t2,t3;
 float PID_OUTPUT = 0; //number between 0 - 255
 float pi = 3.1415;
 
@@ -35,10 +35,10 @@ int resetIntegral = 0;
 int PID_MIN = 0;
 int PID_MAX = 0;
 
-int LEFT_FORWARD_OFFSET = 22;
-int LEFT_BACKWARD_OFFSET = 22;
-int RIGHT_FORWARD_OFFSET = 22;
-int RIGHT_BACKWARD_OFFSET = 22;
+int LEFT_FORWARD_OFFSET = 26;
+int LEFT_BACKWARD_OFFSET = 26;
+int RIGHT_FORWARD_OFFSET = 26;
+int RIGHT_BACKWARD_OFFSET = 26;
 
 float DEAD_ZONE_POSITIVE = 0;
 float DEAD_ZONE_NEGATIVE = 0;
@@ -47,6 +47,18 @@ float MAX_TILT = 40; //degrees
 float MAX_KP = 0;
 float MAX_KI = 0;
 float MAX_KD = 0;
+
+//Bluetooth Declarations
+#define BUFFER_SIZE 20
+
+BLEService laptopMasterService("00000000-5EC4-4083-81CD-A10B8D5CF6EC");
+
+BLEStringCharacteristic laptopMasterCharacteristic("00000001-5EC4-4083-81CD-A10B8D5CF6EC", BLERead | BLEWrite, BUFFER_SIZE);
+BLEStringCharacteristic laptopMasterReceiveCharacteristic("00000002-5EC4-4083-81CD-A10B8D5CF6EC", BLERead | BLEWrite, BUFFER_SIZE);
+BLEStringCharacteristic laptopMasterPIDOUTPUTCharacteristic("00000003-5EC4-4083-81CD-A10B8D5CF6EC", BLERead | BLEWrite, BUFFER_SIZE);
+
+BLEDevice laptopMaster;
+int Laptop2RobotLength = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -57,6 +69,32 @@ void setup() {
     while (1);
   }
 
+  if (!BLE.begin()) {
+    Serial.println("* Starting Bluetooth® Low Energy module failed!");
+    while (1)
+      ;
+  }
+
+  BLE.setLocalName("C5-BLE");
+  BLE.setDeviceName("C5-BLE");
+  BLE.setAdvertisedService(laptopMasterService);
+
+  laptopMasterService.addCharacteristic(laptopMasterCharacteristic);
+  laptopMasterService.addCharacteristic(laptopMasterReceiveCharacteristic);
+  laptopMasterService.addCharacteristic(laptopMasterPIDOUTPUTCharacteristic);
+  BLE.addService(laptopMasterService);
+
+  BLE.advertise();
+
+  while (true) {
+    laptopMaster = BLE.central();
+    if (laptopMaster) {
+      Serial.println("Connected to MASTER LAPTOP");
+      break;
+    }
+  }
+
+
   pinMode(LEFT_MOTOR_FORWARD_PIN, OUTPUT);
   pinMode(LEFT_MOTOR_BACKWARD_PIN, OUTPUT);
   pinMode(RIGHT_MOTOR_FORWARD_PIN, OUTPUT);
@@ -66,33 +104,6 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  if(Serial.available())
-  {
-    String input = Serial.readString();
-
-    kp = input.substring(0, input.indexOf(' ')).toFloat();
-    input = input.substring(input.indexOf(' ') + 1);
-    ki = input.substring(0, input.indexOf(' ')).toFloat();
-    input = input.substring(input.indexOf(' ') + 1);
-    kd = input.substring(0, input.indexOf(' ')).toFloat();
-    input = input.substring(input.indexOf(' ') + 1);
-    resetIntegral = input.substring(0, input.indexOf(' ')).toInt();
-    input = input.substring(input.indexOf(' ') + 1);
-    DEAD_ZONE_POSITIVE = input.substring(0, input.indexOf(' ')).toFloat();
-    input = input.substring(input.indexOf('-'));
-    DEAD_ZONE_NEGATIVE = input.substring(0, input.indexOf(' ')).toFloat();
-
-    MAX_KP = kp*(MAX_TILT*pi/180);
-    MAX_KI = ki*pow((MAX_TILT*pi/180),2)/2;
-    MAX_KD = kd*(1.0/0.01)*(pi/180);
-
-    Serial.print("Kp: ");
-    Serial.print(kp);
-    Serial.print(" Ki: ");
-    Serial.print(ki);
-    Serial.print(" Kd: ");
-    Serial.print(kd);
-  }
   if(resetIntegral == 1)
   {
     //if resetIntegral == 1 RESET else if 0 then do not reset
@@ -101,7 +112,51 @@ void loop() {
   }
 
   readIMUData();
+  receiveBLE();
 
+}
+
+void receiveBLE()
+{
+  if(laptopMaster.connected())
+  {
+    if (laptopMasterReceiveCharacteristic.written()) {
+
+      int receiveLength = laptopMasterReceiveCharacteristic.valueLength();
+      byte receiveBuffer[receiveLength];
+      if (laptopMasterReceiveCharacteristic.readValue(receiveBuffer, receiveLength)) {
+
+        String receiveString = String((char*)receiveBuffer);
+
+        kp = receiveString.substring(3, receiveString.indexOf(' ')).toFloat();
+        receiveString = receiveString.substring(receiveString.indexOf(' ') + 1);
+        ki = receiveString.substring(3, receiveString.indexOf(' ')).toFloat();
+        receiveString = receiveString.substring(receiveString.indexOf(' ') + 1);
+        kd = receiveString.substring(3, receiveString.indexOf(' ')).toFloat();
+        receiveString = receiveString.substring(receiveString.indexOf(' ') + 1);
+        resetIntegral = receiveString.substring(3, receiveString.indexOf(' ')).toInt();
+
+        MAX_KP = kp*(MAX_TILT*pi/180);
+        MAX_KI = ki*pow((MAX_TILT*pi/180),2)/2;
+        MAX_KD = kd*(1.0/0.01)*(pi/180);
+
+        /*Serial.print("Kp: ");
+        Serial.print(kp);
+        Serial.print(" Ki: ");
+        Serial.print(ki);
+        Serial.print(" Kd: ");
+        Serial.print(kd);
+        Serial.print(" RI: ");
+        Serial.println(resetIntegral);*/
+
+      }
+
+      //Receiving data from Laptop Master
+      //String Laptop2RobotReceived = laptopMasterReceiveCharacteristic.readValue();
+    }
+  // Read from IMU and Send Data to Laptop Master (convert float to byte array)
+  laptopMasterCharacteristic.writeValue(String(Theta_Final, 3));
+  }
 }
 
 void readIMUData() {
@@ -119,6 +174,7 @@ void readIMUData() {
 
     PID();
     t0 = t1;
+    laptopMasterPIDOUTPUTCharacteristic.writeValue(String(PID_OUTPUT, 4));
   }
 }
 
@@ -153,7 +209,7 @@ void PID()
       controlWheelMotors((PID_OUTPUT*(255 - 38.25) + 10), 1, (PID_OUTPUT*(255 - 38.25) + 10), 1);
     }
 
-    Serial.print(kp_et, 0);
+    /*Serial.print(kp_et, 0);
     Serial.print(" ");
     Serial.print(ki_et,1);
     Serial.print(" ");
@@ -163,7 +219,7 @@ void PID()
     Serial.print(PID_OUTPUT, 5);
     Serial.print(" ");
     Serial.print(Theta_Final, 1);
-    Serial.println(" ");
+    Serial.println(" ");*/
 
 
     et_old = et_new;
