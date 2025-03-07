@@ -1,6 +1,5 @@
-#include <ArduinoBLE.h>
 #include "Arduino_BMI270_BMM150.h"
-#include <math.h>
+#include <ArduinoBLE.h>
 
 //WHEEL MOTOR PINS
 #define RIGHT_MOTOR_FORWARD_PIN  A0
@@ -8,32 +7,48 @@
 #define LEFT_MOTOR_FORWARD_PIN  A2
 #define LEFT_MOTOR_BACKWARD_PIN  A3
 
-//Gyroscope Values
-float Theta_Gyro = 0;
-//Accelerometer Values
-float Theta_Acc = 0;
-//Weighted Values
-float Theta_Final = 0;
-float k = 0.6;  //0.6 before
-float gx_0, gy_0, gz_0, ax_0, ay_0, az_0, x_0, x;
+// Gyroscope Values
+float Theta_Gyro = 0;  // Gyroscope angle estimate
+// Accelerometer Values
+float Theta_Acc = 0;    // Accelerometer angle estimate
+// Weighted Values (Final Tilt Angle)
+float Theta_Final = 0;  
+float Theta_Old = 0;
+double Theta_Raw = 0;
+float newAngle = 0;
+double y; // Kalman filter measurement residual
+double k = 0.6;
 
 //Wheel Motor Variables
 int left_Motor_Speed, right_Motor_Speed, forward_Motor_Speed, back_Motor_Speed;
 
+// IMU variables
+float gx_0, gy_0, gz_0, ax_0, ay_0, az_0, gx_drift, gy_drift, gz_drift, gyroPitch, accelPitch;
+float gyroUncertainty = 0.07;  // Gyro uncertainty (in radians per second)
+float accelUncertainty = 0.03; // Accelerometer uncertainty (in radians)
+float t0, t1, t2, t3, dt;
+
+// Calibration variables
+int calibrateIMUTime = 3000;  // 3 seconds for calibration
+int calibrationIterations = 0;
+
+// Kalman filter variables
+float P[2][2] = {{1, 0}, {0, 1}};  // Error covariance matrix
+float K[2];  // Kalman gain
+float S;  // Innovation (or residual) covariance
+float P00_temp, P01_temp, P10_temp, P11_temp;  // Temporary variables for calculations
+float Q = 0.001; // Process noise covariance (gyro uncertainty)
+float R = 0.03;   // Measurement noise covariance (accelerometer uncertainty)
+
 //PID Variables
 float et_old,et_new, kp_et,ki_et,kd_et,et_integral, et_derivative;
-float kp = 0.01; //Proportional
+float kp = 0; //Proportional
 float ki = 0; //Integral
 float kd = 0; //Derivative
 float desired_angle = 0; //We always want the robot to be at a 0 degree pitch (angle about the y-axis)
-float dt, t0,t1,t2,t3;
 float PID_OUTPUT = 0; //number between 0 - 255
 float pi = 3.1415;
-
 int resetIntegral = 0;
-
-int PID_MIN = 0;
-int PID_MAX = 0;
 
 int LEFT_FORWARD_OFFSET = 35;
 int LEFT_BACKWARD_OFFSET = 35;
@@ -43,7 +58,7 @@ int RIGHT_BACKWARD_OFFSET = 35;
 float DEAD_ZONE_POSITIVE = 0;
 float DEAD_ZONE_NEGATIVE = 0;
 
-float MAX_TILT = 40; //degrees
+float MAX_TILT = 30; //degrees
 float MAX_KP = 0;
 float MAX_KI = 0;
 float MAX_KD = 0;
@@ -62,13 +77,12 @@ int Laptop2RobotLength = 0;
 int receiveLength = 0;
 
 void setup() {
-  Serial.begin(9600);
-  while (!Serial);
-
+  // Initialize the IMU
   if (!IMU.begin()) {
     Serial.println("Failed to initialize IMU!");
-    while (1);
+    while (1);  // Stop here if initialization fails
   }
+  calibrateIMU();  // Calibrate IMU sensors
 
   if (!BLE.begin()) {
     Serial.println("* Starting Bluetooth® Low Energy module failed!");
@@ -95,7 +109,6 @@ void setup() {
     }
   }
 
-
   pinMode(LEFT_MOTOR_FORWARD_PIN, OUTPUT);
   pinMode(LEFT_MOTOR_BACKWARD_PIN, OUTPUT);
   pinMode(RIGHT_MOTOR_FORWARD_PIN, OUTPUT);
@@ -104,8 +117,7 @@ void setup() {
 }
 
 void loop() {
-  //t2 = micros();
-  // put your main code here, to run repeatedly:
+  
   if(resetIntegral == 1)
   {
     //if resetIntegral == 1 RESET else if 0 then do not reset
@@ -114,11 +126,93 @@ void loop() {
   }
 
   readIMUData();
-
   receiveBLE();
+}
 
-  //t3 = micros();
-  //Serial.println(t3-t2);
+void calibrateIMU() {
+  // Calibrate the IMU by averaging the gyroscope values
+  for (int i = 0; i < calibrateIMUTime; i++) {
+    if (IMU.gyroscopeAvailable()) {
+      IMU.readGyroscope(gx_0, gy_0, gz_0);
+      gx_drift += gx_0;
+      gy_drift += gy_0;
+      gz_drift += gz_0;
+      calibrationIterations++;
+      delay(1);
+    }
+  }
+  
+  // Average the gyroscope values for drift correction
+  gx_drift = gx_drift / calibrationIterations;
+  gy_drift = gy_drift / calibrationIterations;
+  gz_drift = gz_drift / calibrationIterations;
+}
+
+void readIMUData() {
+  if (IMU.gyroscopeAvailable() && IMU.accelerationAvailable()) {
+    // Read gyroscope and accelerometer data
+    IMU.readGyroscope(gx_0, gy_0, gz_0);
+    IMU.readAcceleration(ay_0, ax_0, az_0);
+
+    // Correct for gyroscope drift
+    gx_0 -= gx_drift;
+    gy_0 -= gy_drift;
+    gz_0 -= gz_drift;
+
+    // Calculate time step (dt)
+    t1 = micros();
+    dt = (t1 - t0) / 1000000.0;
+    t0 = t1;
+
+    // Compute the accelerometer pitch angle in degrees
+    Theta_Acc = atan(ax_0 / az_0) * 180 / 3.14159;
+
+    // Compute the gyroscope pitch angle
+    Theta_Gyro += gx_0 * dt;
+
+    //Theta_Raw = (Theta_Gyro)*k + Theta_Acc * (1 - k);
+
+    kalmanFilter();
+    laptopMasterCharacteristic.writeValue(String(Theta_Final, 2));
+
+    PID();
+  }
+}
+
+void kalmanFilter()
+{
+  // Kalman Filter Update (combining the accelerometer and gyroscope angles)
+    // Prediction Step
+    P00_temp = P[0][0] + dt * (dt * P[1][1] - P[0][1] - P[1][0] + Q);
+    P01_temp = P[0][1] - dt * P[1][1];
+    P10_temp = P[1][0] - dt * P[1][1];
+    P11_temp = P[1][1] + Q;
+
+    // Measurement Update
+    S = P00_temp + R;  // Innovation (or residual) covariance
+    K[0] = P00_temp / S;  // Kalman gain for the angle
+    K[1] = P10_temp / S;  // Kalman gain for the rate
+
+    // Compute the new angle estimate
+    y = Theta_Acc - Theta_Gyro;  // Residual (difference between the accelerometer and gyroscope)
+    Theta_Gyro += K[0] * y;
+    
+    // Update error covariance matrix
+    P[0][0] = P00_temp - K[0] * P00_temp;
+    P[0][1] = P01_temp - K[0] * P01_temp;
+    P[1][0] = P10_temp - K[1] * P00_temp;
+    P[1][1] = P11_temp - K[1] * P01_temp;
+
+    // The final angle estimate after the Kalman filter update
+    Theta_Final = Theta_Gyro;
+    if(abs(Theta_Final - Theta_Old) < 0.05)
+    {
+      Theta_Final = Theta_Old;
+    }
+    else
+    {
+      Theta_Old = Theta_Final;
+    }
 
 }
 
@@ -142,50 +236,24 @@ void receiveBLE()
         receiveString = receiveString.substring(receiveString.indexOf(' ') + 1);
         resetIntegral = receiveString.substring(3, receiveString.indexOf(' ')).toInt();
 
-        MAX_KP = kp*(MAX_TILT*pi/180.0);
-        MAX_KI = ki*pow((MAX_TILT*pi/180.0),2)/2.0;
-        MAX_KD = kd*(1.0/0.01)*(pi/180.0); //1 degree in 10 ms is the assumed max change in error we expect.
+        MAX_KP = kp*(MAX_TILT);
+        MAX_KI = ki*pow((MAX_TILT),2)/2.0;
+        MAX_KD = kd*(1.0/0.01); //1 degree in 10 ms is the assumed max change in error we expect.
 
-        /*Serial.print("Kp: ");
-        Serial.print(kp);
-        Serial.print(" Ki: ");
-        Serial.print(ki);
-        Serial.print(" Kd: ");
-        Serial.print(kd);
-        Serial.print(" RI: ");
-        Serial.println(resetIntegral);*/
-
+        Serial.println(MAX_KP);
+        Serial.println(MAX_KI);
+        Serial.println(MAX_KD);
       }
     }
   }
 }
 
-void readIMUData() {
-  if (IMU.gyroscopeAvailable() && IMU.accelerationAvailable()) {
-    t1 = micros();
-    IMU.readGyroscope(gy_0, gx_0, gz_0);
-    IMU.readAcceleration(ay_0, ax_0, az_0);
-
-    Theta_Acc = atan(ax_0 / az_0) * 180 / 3.14159;
-    Theta_Gyro = gy_0*0.01 + Theta_Final;
-
-    Theta_Final = (Theta_Gyro)*k + Theta_Acc * (1 - k);
-    
-    laptopMasterCharacteristic.writeValue(String(Theta_Final, 3));
- 
-    PID();
-    t0 = t1;
-  }
-}
-
 void PID()
 {
-
-    dt = (float)(t1 - t0)/1000000.0;
     //Kp, Ki, and Kd are choosen for radians not for degrees.
     //et_new is in radians not degrees
     
-    et_new = (desired_angle - Theta_Final)*pi/180.0;
+    et_new = (desired_angle - Theta_Final);
     //et_new = (desired_angle - Theta_Final); //degrees
     kp_et = kp*et_new;
 
@@ -196,8 +264,7 @@ void PID()
     kd_et = kd * et_derivative;
 
     PID_OUTPUT = (kp_et + ki_et + kd_et)/(MAX_KP + MAX_KI + MAX_KD); // normalizing it to be between 0 and 1
-
-    //PID_OUTPUT = constrain(PID_OUTPUT, -100, 100);
+    PID_OUTPUT = constrain(PID_OUTPUT, -1.0, 1.0);
 
     if(PID_OUTPUT <= 0.00)
     {
@@ -245,3 +312,4 @@ void controlWheelMotors(int LEFT_MOTOR_PWM_SPEED, int LEFT_MOTOR_DIR, int RIGHT_
     analogWrite(RIGHT_MOTOR_BACKWARD_PIN, RIGHT_BACKWARD_OFFSET + RIGHT_MOTOR_PWM_SPEED);
   }
 }
+

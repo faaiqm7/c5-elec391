@@ -81,9 +81,9 @@ def on_button_click(input):
     elif input == "KiMinus":
         Ki -= 1
     elif input == "KdPlus":
-        Kd += 1
+        Kd += 152
     elif input == "KdMinus":
-        Kd -= 1
+        Kd -= 0.01
 
     send_ble_command()
 
