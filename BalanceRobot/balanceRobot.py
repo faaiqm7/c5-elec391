@@ -28,6 +28,11 @@ Kp = 0
 Ki = 0
 Kd = 0
 
+LMF = 0.830
+LMB = 0.640
+RMF = 0.830
+RMB = 0.645
+
 # Throttle BLE messages
 last_sent_time = 0
 send_interval = 0.1  # Minimum time between BLE sends (100ms)
@@ -43,7 +48,7 @@ def send_ble_command():
     if current_time - last_sent_time >= send_interval:
         last_sent_time = current_time
         if client and ble_loop:
-            command = f"Kp:{Kp} Ki:{Ki} Kd:{Kd} RI:{1}"
+            command = f"Kp:{Kp:.2f} Ki:{Ki:.2f} Kd:{Kd:.2f} RI:{1} LMF:{LMF:.3f} LMB:{LMB:.3f} RMF:{RMF:.3f} RMB:{RMB:.3f}"
             test_str_bytes = bytearray(command, encoding="utf-8")
             asyncio.run_coroutine_threadsafe(
                 client.write_gatt_char(laptop_master_send_characteristic_uuid, test_str_bytes, response=True),
@@ -52,38 +57,72 @@ def send_ble_command():
             print(f"{command}")
 
 def on_press(key):
-    global Kp, Ki, Kd
+    global Kp, Ki, Kd, LMF, LMB, RMF, RMB
     try:
         if key.char == 'q':
-            Kp += 1
+            Kp += 0.5
         elif key.char == 'a':
-            Kp -= 1
+            Kp -= 0.5
         elif key.char == 'w':
-            Ki += 1
+            Ki += 0.1
         elif key.char == 's':
-            Ki -= 1
+            Ki -= 0.1
         elif key.char == 'e':
-            Kd += 1
+            Kd += 0.01
         elif key.char == 'd':
-            Kd -= 1
+            Kd -= 0.01
+        elif key.char == 'r':
+            LMF += 0.005
+        elif key.char == 'f':
+            LMF -= 0.005
+        elif key.char == 't':
+            LMB += 0.005
+        elif key.char == 'g':
+            LMB -= 0.005
+        elif key.char == 'y':
+            RMF += 0.005
+        elif key.char == 'h':
+            RMF -= 0.005
+        elif key.char == 'u':
+            RMB += 0.005
+        elif key.char == 'j':
+            RMB -= 0.005
+
         send_ble_command()
     except AttributeError:
         pass
 
 def on_button_click(input):
-    global Kp, Ki, Kd
+    global Kp, Ki, Kd, LMF, LMB, RMF, RMB
     if input == "KpPlus":
-        Kp += 1
+        Kp += 0.5
     elif input == "KpMinus":
-        Kp -= 1
+        Kp -= 0.5
     elif input == "KiPlus":
         Ki += 1
     elif input == "KiMinus":
         Ki -= 1
     elif input == "KdPlus":
-        Kd += 152
+        Kd += 1
     elif input == "KdMinus":
         Kd -= 0.01
+    elif input == "LMFPlus":
+        LMF += 0.005
+    elif input == "LMFMinus":
+        LMF -= 0.005
+    elif input == "LMBPlus":
+        LMB += 0.005
+    elif input == "LMBMinus":
+        LMB -= 0.005
+    elif input == "RMFPlus":
+        RMF += 0.005
+    elif input == "RMFMinus":
+        RMF -= 0.005
+    elif input == "RMBPlus":
+        RMB += 0.005
+    elif input == "RMBMinus":
+        RMB -= 0.005
+
 
     send_ble_command()
 
@@ -248,6 +287,78 @@ KiMinus = ctk.CTkButton(root,
                              text_color="white", 
                              command=lambda: on_button_click("KdMinus"))
 KiMinus.place(relx=0.15, rely=0.625, anchor="center")
+
+LMotorForwardPlus = ctk.CTkButton(root, 
+                            text="LMF+", 
+                            width=60, 
+                            fg_color="#CD0000", 
+                            hover_color="#9C0000", 
+                            text_color="white", 
+                            command=lambda: on_button_click("LMFPlus"))
+LMotorForwardPlus.place(relx=0.2, rely=0.575, anchor="center")
+
+LMotorForwardMinus = ctk.CTkButton(root, 
+                             text="LMF-", 
+                             width=60, 
+                             fg_color="#CD0000", 
+                             hover_color="#9C0000", 
+                             text_color="white", 
+                             command=lambda: on_button_click("LMFMinus"))
+LMotorForwardMinus.place(relx=0.2, rely=0.625, anchor="center")
+
+LMotorBackwardPlus = ctk.CTkButton(root, 
+                            text="LMB+", 
+                            width=60, 
+                            fg_color="#CD0000", 
+                            hover_color="#9C0000", 
+                            text_color="white", 
+                            command=lambda: on_button_click("LMBPlus"))
+LMotorBackwardPlus.place(relx=0.25, rely=0.575, anchor="center")
+
+LMotorBackwardMinus = ctk.CTkButton(root, 
+                             text="LMB-", 
+                             width=60, 
+                             fg_color="#CD0000", 
+                             hover_color="#9C0000", 
+                             text_color="white", 
+                             command=lambda: on_button_click("LMBMinus"))
+LMotorBackwardMinus.place(relx=0.25, rely=0.625, anchor="center")
+
+RMotorForwardPlus = ctk.CTkButton(root, 
+                            text="RMF+", 
+                            width=60, 
+                            fg_color="#CD0000", 
+                            hover_color="#9C0000", 
+                            text_color="white", 
+                            command=lambda: on_button_click("RMFPlus"))
+RMotorForwardPlus.place(relx=0.3, rely=0.575, anchor="center")
+
+RMotorForwardMinus = ctk.CTkButton(root, 
+                             text="RMF-", 
+                             width=60, 
+                             fg_color="#CD0000", 
+                             hover_color="#9C0000", 
+                             text_color="white", 
+                             command=lambda: on_button_click("RMFMinus"))
+RMotorForwardMinus.place(relx=0.3, rely=0.625, anchor="center")
+
+RMotorBackwardPlus = ctk.CTkButton(root, 
+                            text="RMB+", 
+                            width=60, 
+                            fg_color="#CD0000", 
+                            hover_color="#9C0000", 
+                            text_color="white", 
+                            command=lambda: on_button_click("RMBPlus"))
+RMotorBackwardPlus.place(relx=0.35, rely=0.575, anchor="center")
+
+RMotorBackwardMinus = ctk.CTkButton(root, 
+                             text="RMB-", 
+                             width=60, 
+                             fg_color="#CD0000", 
+                             hover_color="#9C0000", 
+                             text_color="white", 
+                             command=lambda: on_button_click("RMBMinus"))
+RMotorBackwardMinus.place(relx=0.35, rely=0.625, anchor="center")
 
 label = ctk.CTkLabel(root, text="C5-Robot", font=("Roboto", 40))
 label.place(relx=0.1, rely=0.1, anchor="center")

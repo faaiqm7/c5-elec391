@@ -1,11 +1,19 @@
+#include "mbed.h"
 #include "Arduino_BMI270_BMM150.h"
 #include <ArduinoBLE.h>
+
 
 //WHEEL MOTOR PINS
 #define RIGHT_MOTOR_FORWARD_PIN  A0
 #define RIGHT_MOTOR_BACKWARD_PIN  A1
 #define LEFT_MOTOR_FORWARD_PIN  A2
 #define LEFT_MOTOR_BACKWARD_PIN  A3
+
+// Define PWM objects for the analog pins
+mbed::PwmOut pwmA0(digitalPinToPinName(A0));
+mbed::PwmOut pwmA1(digitalPinToPinName(A1));
+mbed::PwmOut pwmA2(digitalPinToPinName(A2));
+mbed::PwmOut pwmA3(digitalPinToPinName(A3));
 
 // Gyroscope Values
 float Theta_Gyro = 0;  // Gyroscope angle estimate
@@ -20,7 +28,7 @@ double y; // Kalman filter measurement residual
 double k = 0.6;
 
 //Wheel Motor Variables
-int left_Motor_Speed, right_Motor_Speed, forward_Motor_Speed, back_Motor_Speed;
+float left_Motor_Speed, right_Motor_Speed, forward_Motor_Speed, back_Motor_Speed;
 
 // IMU variables
 float gx_0, gy_0, gz_0, ax_0, ay_0, az_0, gx_drift, gy_drift, gz_drift, gyroPitch, accelPitch;
@@ -50,10 +58,10 @@ float PID_OUTPUT = 0; //number between 0 - 255
 float pi = 3.1415;
 int resetIntegral = 0;
 
-int LEFT_FORWARD_OFFSET = 35;
-int LEFT_BACKWARD_OFFSET = 35;
-int RIGHT_FORWARD_OFFSET = 35;
-int RIGHT_BACKWARD_OFFSET = 35;
+float LEFT_FORWARD_OFFSET = 0.830;
+float LEFT_BACKWARD_OFFSET = 0.640;
+float RIGHT_FORWARD_OFFSET = 0.830;
+float RIGHT_BACKWARD_OFFSET = 0.645;
 
 float DEAD_ZONE_POSITIVE = 0;
 float DEAD_ZONE_NEGATIVE = 0;
@@ -64,7 +72,7 @@ float MAX_KI = 0;
 float MAX_KD = 0;
 
 //Bluetooth Declarations
-#define BUFFER_SIZE 20
+#define BUFFER_SIZE 64
 
 BLEService laptopMasterService("00000000-5EC4-4083-81CD-A10B8D5CF6EC");
 
@@ -75,6 +83,7 @@ BLEStringCharacteristic laptopMasterPIDOUTPUTCharacteristic("00000003-5EC4-4083-
 BLEDevice laptopMaster;
 int Laptop2RobotLength = 0;
 int receiveLength = 0;
+
 
 void setup() {
   // Initialize the IMU
@@ -109,22 +118,27 @@ void setup() {
     }
   }
 
-  pinMode(LEFT_MOTOR_FORWARD_PIN, OUTPUT);
+  /*pinMode(LEFT_MOTOR_FORWARD_PIN, OUTPUT);
   pinMode(LEFT_MOTOR_BACKWARD_PIN, OUTPUT);
   pinMode(RIGHT_MOTOR_FORWARD_PIN, OUTPUT);
-  pinMode(RIGHT_MOTOR_BACKWARD_PIN, OUTPUT);
+  pinMode(RIGHT_MOTOR_BACKWARD_PIN, OUTPUT);*/
+
+  float pwm_frequency = 20000.0;  // 20 kHz
+  float pwm_period = 1.0 / pwm_frequency;
+  pwmA0.period(pwm_period);
+  pwmA1.period(pwm_period);
+  pwmA2.period(pwm_period);
+  pwmA3.period(pwm_period);
 
 }
 
 void loop() {
-  
   if(resetIntegral == 1)
   {
     //if resetIntegral == 1 RESET else if 0 then do not reset
     et_integral = 0;
     resetIntegral = 0;
   }
-
   readIMUData();
   receiveBLE();
 }
@@ -175,6 +189,12 @@ void readIMUData() {
     kalmanFilter();
     laptopMasterCharacteristic.writeValue(String(Theta_Final, 2));
 
+    PID();
+  }
+  else
+  {
+    kalmanFilter();
+    laptopMasterCharacteristic.writeValue(String(Theta_Final, 2));
     PID();
   }
 }
@@ -228,6 +248,8 @@ void receiveBLE()
 
         String receiveString = String((char*)receiveBuffer);
 
+        //Serial.println(receiveString);
+
         kp = receiveString.substring(3, receiveString.indexOf(' ')).toFloat();
         receiveString = receiveString.substring(receiveString.indexOf(' ') + 1);
         ki = receiveString.substring(3, receiveString.indexOf(' ')).toFloat();
@@ -235,14 +257,20 @@ void receiveBLE()
         kd = receiveString.substring(3, receiveString.indexOf(' ')).toFloat();
         receiveString = receiveString.substring(receiveString.indexOf(' ') + 1);
         resetIntegral = receiveString.substring(3, receiveString.indexOf(' ')).toInt();
+        receiveString = receiveString.substring(receiveString.indexOf(' ') + 1);
+        RIGHT_FORWARD_OFFSET = receiveString.substring(4, receiveString.indexOf(' ')).toFloat();
+        receiveString = receiveString.substring(receiveString.indexOf(' ') + 1);
+        RIGHT_BACKWARD_OFFSET = receiveString.substring(4, receiveString.indexOf(' ')).toFloat();
+        receiveString = receiveString.substring(receiveString.indexOf(' ') + 1);
+        LEFT_FORWARD_OFFSET = receiveString.substring(4, receiveString.indexOf(' ')).toFloat();
+        receiveString = receiveString.substring(receiveString.indexOf(' ') + 1);
+        LEFT_BACKWARD_OFFSET = receiveString.substring(4, receiveString.indexOf(' ')).toFloat();
+
+        Serial.println(RIGHT_BACKWARD_OFFSET);
 
         MAX_KP = kp*(MAX_TILT);
         MAX_KI = ki*pow((MAX_TILT),2)/2.0;
         MAX_KD = kd*(1.0/0.01); //1 degree in 10 ms is the assumed max change in error we expect.
-
-        Serial.println(MAX_KP);
-        Serial.println(MAX_KI);
-        Serial.println(MAX_KD);
       }
     }
   }
@@ -259,22 +287,27 @@ void PID()
 
     et_integral += et_new*(float)dt;
     ki_et = ki*et_integral;
+    ki_et = constrain(ki_et, -1.0*MAX_KI, MAX_KI);
     
     et_derivative = (et_new - et_old) / ((float)dt);
     kd_et = kd * et_derivative;
 
-    PID_OUTPUT = (kp_et + ki_et + kd_et)/(MAX_KP + MAX_KI + MAX_KD); // normalizing it to be between 0 and 1
-    PID_OUTPUT = constrain(PID_OUTPUT, -1.0, 1.0);
+    //PID_OUTPUT = (kp_et + ki_et + kd_et)/(MAX_KP + MAX_KI + MAX_KD); // normalizing it to be between 0 and 1
+    PID_OUTPUT = (kp_et + ki_et + kd_et);
+    PID_OUTPUT = constrain(PID_OUTPUT, -255.0, 255.0);
+  
 
     if(PID_OUTPUT <= 0.00)
     {
+      PID_OUTPUT /= 255.0;
       //PID_OUT will be negative (mostly)
-      controlWheelMotors(abs(PID_OUTPUT*(255 - 38.25)) + 10 , 0, (abs(PID_OUTPUT*(255 - 38.25)) + 10), 0);
+      controlWheelMotors(abs(PID_OUTPUT), 0, abs(PID_OUTPUT), 0);
     }
     else if(PID_OUTPUT >= 0.00)
     {
+      PID_OUTPUT /= 255.0;
       //Theta < 0, PID_OUT will be positive (mostly)
-      controlWheelMotors((PID_OUTPUT*(255 - 38.25) + 10), 1, (PID_OUTPUT*(255 - 38.25) + 10), 1);
+      controlWheelMotors(PID_OUTPUT, 1, PID_OUTPUT, 1);
     }
 
     et_old = et_new;
@@ -288,28 +321,28 @@ void PID()
  RIGHT_MOTOR_DIR (0 OR 1) : 0 = Forward Direction of Right Motor and 1 = Backward Direction of Right Motor
 *************************************************************************************************************/
 
-void controlWheelMotors(int LEFT_MOTOR_PWM_SPEED, int LEFT_MOTOR_DIR, int RIGHT_MOTOR_PWM_SPEED, int RIGHT_MOTOR_DIR)
+void controlWheelMotors(float LEFT_MOTOR_PWM_SPEED, float LEFT_MOTOR_DIR, float RIGHT_MOTOR_PWM_SPEED, float RIGHT_MOTOR_DIR)
 {
   if(LEFT_MOTOR_DIR == 0)
   {
-    analogWrite(LEFT_MOTOR_FORWARD_PIN, LEFT_FORWARD_OFFSET + LEFT_MOTOR_PWM_SPEED);
-    analogWrite(LEFT_MOTOR_BACKWARD_PIN, LEFT_FORWARD_OFFSET - 5);
+    pwmA2.write(LEFT_MOTOR_PWM_SPEED + LEFT_FORWARD_OFFSET);
+    pwmA3.write(0.55);
   }
   else if(LEFT_MOTOR_DIR == 1)
   {
-    analogWrite(LEFT_MOTOR_FORWARD_PIN, LEFT_BACKWARD_OFFSET - 5);
-    analogWrite(LEFT_MOTOR_BACKWARD_PIN, LEFT_BACKWARD_OFFSET + LEFT_MOTOR_PWM_SPEED);
+    pwmA2.write(0.55);
+    pwmA3.write(LEFT_MOTOR_PWM_SPEED + LEFT_BACKWARD_OFFSET);
   }
 
   if(RIGHT_MOTOR_DIR == 0)
   {
-    analogWrite(RIGHT_MOTOR_FORWARD_PIN, RIGHT_FORWARD_OFFSET + RIGHT_MOTOR_PWM_SPEED);
-    analogWrite(RIGHT_MOTOR_BACKWARD_PIN, RIGHT_FORWARD_OFFSET - 5);
+    pwmA0.write(RIGHT_MOTOR_PWM_SPEED + RIGHT_FORWARD_OFFSET);
+    pwmA1.write(0.55);
   }
   else if(RIGHT_MOTOR_DIR == 1)
   {
-    analogWrite(RIGHT_MOTOR_FORWARD_PIN, RIGHT_BACKWARD_OFFSET - 5);
-    analogWrite(RIGHT_MOTOR_BACKWARD_PIN, RIGHT_BACKWARD_OFFSET + RIGHT_MOTOR_PWM_SPEED);
+    pwmA0.write(0.55);
+    pwmA1.write(RIGHT_MOTOR_PWM_SPEED + RIGHT_BACKWARD_OFFSET);
   }
 }
 
