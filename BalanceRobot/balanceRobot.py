@@ -15,6 +15,11 @@ laptop_master_service_uuid = "00000000-5EC4-4083-81CD-A10B8D5CF6EC"
 laptop_master_characteristic_angle_uuid = "00000001-5EC4-4083-81CD-A10B8D5CF6EC"
 laptop_master_send_characteristic_uuid = "00000002-5EC4-4083-81CD-A10B8D5CF6EC"
 laptop_master_characteristic_pidoutput_uuid = "00000003-5EC4-4083-81CD-A10B8D5CF6EC"
+laptop_master_characteristic_kpoutput_uuid = "00000003-5EC4-4083-81CD-A10B8D5CF6EC"
+laptop_master_characteristic_kioutput_uuid = "00000004-5EC4-4083-81CD-A10B8D5CF6EC"
+laptop_master_characteristic_kdoutput_uuid = "00000005-5EC4-4083-81CD-A10B8D5CF6EC"
+
+
 
 # The name of the Arduino device
 arduino_device_name = "C5-BLE"  # Replace with your Arduino device name
@@ -35,11 +40,14 @@ RMB = 0.645
 
 # Throttle BLE messages
 last_sent_time = 0
-send_interval = 0.1  # Minimum time between BLE sends (100ms)
+send_interval = 0.01  # Minimum time between BLE sends (100ms)
 
 # Angle Data for Live Plotting
 angles = []  # List to store received angles
 PIDouts = [] # List to store PID outputs
+KpOuts = []
+KiOuts = []
+KdOuts = []
 time_stamps = []  # List to store time of each angle reading
 
 def send_ble_command():
@@ -60,17 +68,17 @@ def on_press(key):
     global Kp, Ki, Kd, LMF, LMB, RMF, RMB
     try:
         if key.char == 'q':
-            Kp += 0.5
+            Kp += 0.1
         elif key.char == 'a':
-            Kp -= 0.5
+            Kp -= 0.1
         elif key.char == 'w':
-            Ki += 0.1
+            Ki += 0.05
         elif key.char == 's':
-            Ki -= 0.1
+            Ki -= 0.05
         elif key.char == 'e':
-            Kd += 0.01
+            Kd += 0.005
         elif key.char == 'd':
-            Kd -= 0.01
+            Kd -= 0.005
         elif key.char == 'r':
             LMF += 0.005
         elif key.char == 'f':
@@ -95,17 +103,17 @@ def on_press(key):
 def on_button_click(input):
     global Kp, Ki, Kd, LMF, LMB, RMF, RMB
     if input == "KpPlus":
-        Kp += 0.5
+        Kp += 0.1
     elif input == "KpMinus":
-        Kp -= 0.5
+        Kp -= 0.1
     elif input == "KiPlus":
-        Ki += 1
+        Ki += 0.05
     elif input == "KiMinus":
-        Ki -= 1
+        Ki -= 0.05
     elif input == "KdPlus":
-        Kd += 1
+        Kd += 0.005
     elif input == "KdMinus":
-        Kd -= 0.01
+        Kd -= 0.005
     elif input == "LMFPlus":
         LMF += 0.005
     elif input == "LMFMinus":
@@ -127,7 +135,7 @@ def on_button_click(input):
     send_ble_command()
 
 async def run_ble():
-    global client, ble_loop, angles, time_stamps, PIDouts
+    global client, ble_loop, angles, time_stamps, PIDouts, KpOuts, KiOuts, KdOuts
     ble_loop = asyncio.get_running_loop()
     devices = await BleakScanner.discover()
     arduino_device = next((device for device in devices if device.name == arduino_device_name), None)
@@ -145,6 +153,12 @@ async def run_ble():
                 angleReceived = angleReceived.decode('utf-8')
                 pidOutput = await client.read_gatt_char(laptop_master_characteristic_pidoutput_uuid)
                 pidOutput = pidOutput.decode('utf-8')
+                KpReceived = await client.read_gatt_char(laptop_master_characteristic_kpoutput_uuid)
+                KpReceived = KpReceived.decode('utf-8')
+                KiReceived = await client.read_gatt_char(laptop_master_characteristic_kioutput_uuid)
+                KiReceived = KiReceived.decode('utf-8')
+                KdReceived = await client.read_gatt_char(laptop_master_characteristic_kdoutput_uuid)
+                KdReceived = KdReceived.decode('utf-8')
                 #print(f"Tilt: {angleReceived}° PID Output: {pidOutput}")
                 # print(f"Tilt: {angleReceived}°")
 
@@ -152,6 +166,9 @@ async def run_ble():
                 current_time = time.time()
                 angles.append(float(angleReceived))
                 PIDouts.append(float(pidOutput))
+                KpOuts.append(float(KpReceived))
+                KiOuts.append(float(KiReceived))
+                KdOuts.append(float(KdReceived))
                 time_stamps.append(current_time)
 
                 # Limit the number of points in the plot to avoid memory issues
@@ -160,12 +177,22 @@ async def run_ble():
                     time_stamps.pop(0)
                 if len(PIDouts) > 100:
                     PIDouts.pop(0)
+                if len(KpOuts) > 100:
+                    KpOuts.pop(0)
+                if len(KiOuts) > 100:
+                    KiOuts.pop(0)
+                if len(KdOuts) > 100:
+                    KdOuts.pop(0)
+
 
                 update_plot()
 
                 # Update the angle label
                 update_angle_label()
                 update_pidoutput_label()
+                update_kpoutput_label()
+                update_kioutput_label()
+                update_kdoutput_label()
 
                 await asyncio.sleep(0.01)
             except Exception as e:
@@ -393,7 +420,7 @@ sys.stdout = TerminalRedirector(terminal)
 
 # Create a white background frame for the angle label
 angle_frame = ctk.CTkFrame(root, width=160, height=50, fg_color="white", border_width=2, border_color="#9A0000")
-angle_frame.place(relx=0.1, rely=0.45, anchor="center")
+angle_frame.place(relx=0.08, rely=0.5, anchor="center")
 
 # Create the angle label inside the frame
 angle_label = ctk.CTkLabel(angle_frame, text="Angle: 0°", font=("Roboto", 24))
@@ -401,11 +428,33 @@ angle_label.place(relx=0.5, rely=0.5, anchor="center")  # Center the label insid
 
 # Create a white background frame for the pidoutput label
 pidoutput_frame = ctk.CTkFrame(root, width=240, height=50, fg_color="white", border_width=2, border_color="#9A0000")
-pidoutput_frame.place(relx=0.1, rely=0.75, anchor="center")
+pidoutput_frame.place(relx=0.3, rely=0.29, anchor="center")
 
 # Create the pidoutput label inside the frame
 pidoutput_label = ctk.CTkLabel(pidoutput_frame, text="PID: ", font=("Roboto", 24))
 pidoutput_label.place(relx=0.5, rely=0.5, anchor="center")  # Center the label inside the frame
+
+# Create a white background frame for the pidoutput label
+kpoutput_frame = ctk.CTkFrame(root, width=240, height=50, fg_color="white", border_width=2, border_color="#9A0000")
+kpoutput_frame.place(relx=0.3, rely=0.36, anchor="center")
+
+# Create the pidoutput label inside the frame
+kpoutput_label = ctk.CTkLabel(kpoutput_frame, text="Kp: ", font=("Roboto", 24))
+kpoutput_label.place(relx=0.5, rely=0.5, anchor="center")  # Center the label inside the frame
+
+kioutput_frame = ctk.CTkFrame(root, width=240, height=50, fg_color="white", border_width=2, border_color="#9A0000")
+kioutput_frame.place(relx=0.3, rely=0.43, anchor="center")
+
+# Create the pidoutput label inside the frame
+kioutput_label = ctk.CTkLabel(kioutput_frame, text="Ki: ", font=("Roboto", 24))
+kioutput_label.place(relx=0.5, rely=0.5, anchor="center")  # Center the label inside the frame
+
+kdoutput_frame = ctk.CTkFrame(root, width=240, height=50, fg_color="white", border_width=2, border_color="#9A0000")
+kdoutput_frame.place(relx=0.3, rely=0.5, anchor="center")
+
+# Create the pidoutput label inside the frame
+kdoutput_label = ctk.CTkLabel(kdoutput_frame, text="Kd: ", font=("Roboto", 24))
+kdoutput_label.place(relx=0.5, rely=0.5, anchor="center")  # Center the label inside the frame
 
 
 # Update the angle label with the latest value
@@ -420,6 +469,25 @@ def update_pidoutput_label():
     global PIDouts
     if PIDouts:
         latest_PID = PIDouts[-1]
-        pidoutput_label.configure(text=f"PID: {latest_PID:.4f}")
+        pidoutput_label.configure(text=f"PID: {latest_PID:.2f}")
+
+def update_kpoutput_label():
+    global KpOuts
+    if KpOuts:
+        latest_Kp = KpOuts[-1]
+        kpoutput_label.configure(text=f"Kp: {latest_Kp:.2f}")
+
+def update_kioutput_label():
+    global KiOuts
+    if KiOuts:
+        latest_Ki = KiOuts[-1]
+        kioutput_label.configure(text=f"Ki: {latest_Ki:.2f}")
+
+def update_kdoutput_label():
+    global KdOuts
+    if KdOuts:
+        latest_Kd = KdOuts[-1]
+        kdoutput_label.configure(text=f"Kd: {latest_Kd:.2f}")
+
 
 root.mainloop()

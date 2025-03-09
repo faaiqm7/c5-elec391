@@ -79,6 +79,9 @@ BLEService laptopMasterService("00000000-5EC4-4083-81CD-A10B8D5CF6EC");
 BLEStringCharacteristic laptopMasterCharacteristic("00000001-5EC4-4083-81CD-A10B8D5CF6EC", BLERead | BLEWrite, BUFFER_SIZE);
 BLEStringCharacteristic laptopMasterReceiveCharacteristic("00000002-5EC4-4083-81CD-A10B8D5CF6EC", BLERead | BLEWrite, BUFFER_SIZE);
 BLEStringCharacteristic laptopMasterPIDOUTPUTCharacteristic("00000003-5EC4-4083-81CD-A10B8D5CF6EC", BLERead | BLEWrite, BUFFER_SIZE);
+BLEStringCharacteristic laptopMasterKpOutputCharacteristic("00000004-5EC4-4083-81CD-A10B8D5CF6EC", BLERead | BLEWrite, BUFFER_SIZE);
+BLEStringCharacteristic laptopMasterKiOutputCharacteristic("00000005-5EC4-4083-81CD-A10B8D5CF6EC", BLERead | BLEWrite, BUFFER_SIZE);
+BLEStringCharacteristic laptopMasterKdOutputCharacteristic("00000006-5EC4-4083-81CD-A10B8D5CF6EC", BLERead | BLEWrite, BUFFER_SIZE);
 
 BLEDevice laptopMaster;
 int Laptop2RobotLength = 0;
@@ -106,6 +109,9 @@ void setup() {
   laptopMasterService.addCharacteristic(laptopMasterCharacteristic);
   laptopMasterService.addCharacteristic(laptopMasterReceiveCharacteristic);
   laptopMasterService.addCharacteristic(laptopMasterPIDOUTPUTCharacteristic);
+  laptopMasterService.addCharacteristic(laptopMasterKpOutputCharacteristic);
+  laptopMasterService.addCharacteristic(laptopMasterKiOutputCharacteristic);
+  laptopMasterService.addCharacteristic(laptopMasterKdOutputCharacteristic);
   BLE.addService(laptopMasterService);
 
   BLE.advertise();
@@ -294,24 +300,28 @@ void PID()
 
     //PID_OUTPUT = (kp_et + ki_et + kd_et)/(MAX_KP + MAX_KI + MAX_KD); // normalizing it to be between 0 and 1
     PID_OUTPUT = (kp_et + ki_et + kd_et);
-    PID_OUTPUT = constrain(PID_OUTPUT, -255.0, 255.0);
-  
+    PID_OUTPUT = constrain(PID_OUTPUT, -100.0, 100.0);
+    PID_OUTPUT /= 100.0;
 
     if(PID_OUTPUT <= 0.00)
     {
-      PID_OUTPUT /= 255.0;
+      //PID_OUTPUT /= 1000.0;
       //PID_OUT will be negative (mostly)
       controlWheelMotors(abs(PID_OUTPUT), 0, abs(PID_OUTPUT), 0);
     }
     else if(PID_OUTPUT >= 0.00)
     {
-      PID_OUTPUT /= 255.0;
+      //PID_OUTPUT /= 1000.0;
       //Theta < 0, PID_OUT will be positive (mostly)
       controlWheelMotors(PID_OUTPUT, 1, PID_OUTPUT, 1);
     }
 
     et_old = et_new;
     laptopMasterPIDOUTPUTCharacteristic.writeValue(String(PID_OUTPUT, 4));
+    laptopMasterKpOutputCharacteristic.writeValue(String(kp_et/100.0, 1));
+    laptopMasterKiOutputCharacteristic.writeValue(String(ki_et/100.0, 1));
+    laptopMasterKdOutputCharacteristic.writeValue(String(kd_et/100.0, 1));
+
 }
 
 /************************************************************************************************************
