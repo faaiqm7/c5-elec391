@@ -58,9 +58,9 @@ float PID_OUTPUT = 0; //number between 0 - 255
 float pi = 3.1415;
 int resetIntegral = 0;
 
-float LEFT_FORWARD_OFFSET = 0.830;
+float LEFT_FORWARD_OFFSET = 0.790;
 float LEFT_BACKWARD_OFFSET = 0.640;
-float RIGHT_FORWARD_OFFSET = 0.830;
+float RIGHT_FORWARD_OFFSET = 0.790;
 float RIGHT_BACKWARD_OFFSET = 0.645;
 
 float DEAD_ZONE_POSITIVE = 0;
@@ -273,6 +273,7 @@ void receiveBLE()
         LEFT_BACKWARD_OFFSET = receiveString.substring(4, receiveString.indexOf(' ')).toFloat();
 
         Serial.println(RIGHT_BACKWARD_OFFSET);
+        RIGHT_BACKWARD_OFFSET = LEFT_BACKWARD_OFFSET;
 
         MAX_KP = kp*(MAX_TILT);
         MAX_KI = ki*pow((MAX_TILT),2)/2.0;
