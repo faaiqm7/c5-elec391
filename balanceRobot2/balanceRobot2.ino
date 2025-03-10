@@ -54,7 +54,7 @@ float kp = 0; //Proportional
 float ki = 0; //Integral
 float kd = 0; //Derivative
 float desired_angle = 0; //We always want the robot to be at a 0 degree pitch (angle about the y-axis)
-float PID_OUTPUT = 0; //number between 0 - 255
+float PID_OUTPUT = 0; //number between 0 - 100
 float pi = 3.1415;
 int resetIntegral = 0;
 
@@ -264,16 +264,22 @@ void receiveBLE()
         receiveString = receiveString.substring(receiveString.indexOf(' ') + 1);
         resetIntegral = receiveString.substring(3, receiveString.indexOf(' ')).toInt();
         receiveString = receiveString.substring(receiveString.indexOf(' ') + 1);
-        RIGHT_FORWARD_OFFSET = receiveString.substring(4, receiveString.indexOf(' ')).toFloat();
-        receiveString = receiveString.substring(receiveString.indexOf(' ') + 1);
-        RIGHT_BACKWARD_OFFSET = receiveString.substring(4, receiveString.indexOf(' ')).toFloat();
-        receiveString = receiveString.substring(receiveString.indexOf(' ') + 1);
         LEFT_FORWARD_OFFSET = receiveString.substring(4, receiveString.indexOf(' ')).toFloat();
         receiveString = receiveString.substring(receiveString.indexOf(' ') + 1);
         LEFT_BACKWARD_OFFSET = receiveString.substring(4, receiveString.indexOf(' ')).toFloat();
+        receiveString = receiveString.substring(receiveString.indexOf(' ') + 1);
+        RIGHT_FORWARD_OFFSET = receiveString.substring(4, receiveString.indexOf(' ')).toFloat();
+        receiveString = receiveString.substring(receiveString.indexOf(' ') + 1);
+        RIGHT_BACKWARD_OFFSET = receiveString.substring(4, receiveString.indexOf(' ')).toFloat();
 
+        Serial.print("LMF: ");
+        Serial.print(LEFT_FORWARD_OFFSET);
+        Serial.print(" LMB: ");
+        Serial.print(LEFT_BACKWARD_OFFSET);
+        Serial.print(" RMF: ");
+        Serial.print(RIGHT_FORWARD_OFFSET);
+        Serial.print(" RMB: ");
         Serial.println(RIGHT_BACKWARD_OFFSET);
-        RIGHT_BACKWARD_OFFSET = LEFT_BACKWARD_OFFSET;
 
         MAX_KP = kp*(MAX_TILT);
         MAX_KI = ki*pow((MAX_TILT),2)/2.0;
@@ -303,6 +309,7 @@ void PID()
     PID_OUTPUT = (kp_et + ki_et + kd_et);
     PID_OUTPUT = constrain(PID_OUTPUT, -100.0, 100.0);
     PID_OUTPUT /= 100.0;
+    Serial.println(PID_OUTPUT);
 
     if(PID_OUTPUT <= 0.00)
     {
