@@ -25,7 +25,7 @@ float Theta_Old = 0;
 double Theta_Raw = 0;
 float newAngle = 0;
 double y; // Kalman filter measurement residual
-double k = 0.6;
+double k = 0.9;
 
 //Wheel Motor Variables
 float left_Motor_Speed, right_Motor_Speed, forward_Motor_Speed, back_Motor_Speed;
@@ -106,14 +106,13 @@ void loop() {
 
   }
   readIMUData();
-  Serial.print("Kp: ");
+  /*Serial.print("Kp: ");
   Serial.print(kp);
   Serial.print(" Ki: ");
   Serial.print(ki);
   Serial.print(" Kd: ");
   Serial.print(kd);
-  Serial.print(" Out:");
-  Serial.println(PID_MOTOR_OUTPUT);
+  Serial.print(" Out:");*/
 
 }
 
@@ -139,7 +138,7 @@ void calibrateIMU() {
 void readIMUData() {
   if (IMU.gyroscopeAvailable() && IMU.accelerationAvailable()) {
     // Read gyroscope and accelerometer data
-    IMU.readGyroscope(gx_0, gy_0, gz_0);
+    IMU.readGyroscope(gy_0, gx_0, gz_0);
     IMU.readAcceleration(ay_0, ax_0, az_0);
 
     // Correct for gyroscope drift
@@ -158,15 +157,10 @@ void readIMUData() {
     // Compute the gyroscope pitch angle
     Theta_Gyro += gx_0 * dt;
 
-    //Theta_Raw = (Theta_Gyro)*k + Theta_Acc * (1 - k);
+    Theta_Final = (Theta_Gyro)*k + Theta_Acc * (1 - k);
+    Serial.println(Theta_Final);
 
-    kalmanFilter();
-    myPID.Compute();
-    PID_MOTOR_OUTPUT = (float)PID_OUTPUT/1000.0;
-  }
-  else
-  {
-    kalmanFilter();
+    //kalmanFilter();
     myPID.Compute();
     PID_MOTOR_OUTPUT = (float)PID_OUTPUT/1000.0;
   }
