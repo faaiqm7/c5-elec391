@@ -231,14 +231,14 @@ void kalmanFilter()
 
     // The final angle estimate after the Kalman filter update
     Theta_Final = Theta_Gyro;
-    if(abs(Theta_Final - Theta_Old) < 0.05)
+    /*if(abs(Theta_Final - Theta_Old) < 0.05)
     {
       Theta_Final = Theta_Old;
     }
     else
     {
       Theta_Old = Theta_Final;
-    }
+    }*/
 
 }
 
@@ -254,8 +254,6 @@ void receiveBLE()
 
         String receiveString = String((char*)receiveBuffer);
 
-        //Serial.println(receiveString);
-
         kp = receiveString.substring(3, receiveString.indexOf(' ')).toFloat();
         receiveString = receiveString.substring(receiveString.indexOf(' ') + 1);
         ki = receiveString.substring(3, receiveString.indexOf(' ')).toFloat();
@@ -264,26 +262,32 @@ void receiveBLE()
         receiveString = receiveString.substring(receiveString.indexOf(' ') + 1);
         resetIntegral = receiveString.substring(3, receiveString.indexOf(' ')).toInt();
         receiveString = receiveString.substring(receiveString.indexOf(' ') + 1);
-        LEFT_FORWARD_OFFSET = receiveString.substring(4, receiveString.indexOf(' ')).toFloat();
+        RIGHT_FORWARD_OFFSET = receiveString.substring(0, receiveString.indexOf(' ')).toFloat();
         receiveString = receiveString.substring(receiveString.indexOf(' ') + 1);
-        LEFT_BACKWARD_OFFSET = receiveString.substring(4, receiveString.indexOf(' ')).toFloat();
+        RIGHT_BACKWARD_OFFSET = receiveString.substring(0, receiveString.indexOf(' ')).toFloat();
         receiveString = receiveString.substring(receiveString.indexOf(' ') + 1);
-        RIGHT_FORWARD_OFFSET = receiveString.substring(4, receiveString.indexOf(' ')).toFloat();
+        LEFT_FORWARD_OFFSET = receiveString.substring(0, receiveString.indexOf(' ')).toFloat();
         receiveString = receiveString.substring(receiveString.indexOf(' ') + 1);
-        RIGHT_BACKWARD_OFFSET = receiveString.substring(4, receiveString.indexOf(' ')).toFloat();
+        LEFT_BACKWARD_OFFSET = receiveString.substring(0, receiveString.indexOf(' ')).toFloat();
 
-        Serial.print("LMF: ");
+        /*Serial.print("Kp: ");
+        Serial.print(kp);
+        Serial.print(" Ki: ");
+        Serial.print(ki);
+        Serial.print(" Kd: ");
+        Serial.print(kd);
+        Serial.print(" LMF: ");
         Serial.print(LEFT_FORWARD_OFFSET);
         Serial.print(" LMB: ");
         Serial.print(LEFT_BACKWARD_OFFSET);
         Serial.print(" RMF: ");
         Serial.print(RIGHT_FORWARD_OFFSET);
         Serial.print(" RMB: ");
-        Serial.println(RIGHT_BACKWARD_OFFSET);
+        Serial.println(RIGHT_BACKWARD_OFFSET);*/
 
-        MAX_KP = kp*(MAX_TILT);
+        /*MAX_KP = kp*(MAX_TILT);
         MAX_KI = ki*pow((MAX_TILT),2)/2.0;
-        MAX_KD = kd*(1.0/0.01); //1 degree in 10 ms is the assumed max change in error we expect.
+        MAX_KD = kd*(1.0/0.01); //1 degree in 10 ms is the assumed max change in error we expect.*/
       }
     }
   }
@@ -309,7 +313,13 @@ void PID()
     PID_OUTPUT = (kp_et + ki_et + kd_et);
     PID_OUTPUT = constrain(PID_OUTPUT, -100.0, 100.0);
     PID_OUTPUT /= 100.0;
-    Serial.println(PID_OUTPUT);
+
+    Serial.print("kp_et: ");
+    Serial.print(kp_et);
+    Serial.print(" ki_et: ");
+    Serial.print(ki_et);
+    Serial.print(" kd_et: ");
+    Serial.println(kd_et);
 
     if(PID_OUTPUT <= 0.00)
     {
@@ -326,9 +336,9 @@ void PID()
 
     et_old = et_new;
     laptopMasterPIDOUTPUTCharacteristic.writeValue(String(PID_OUTPUT, 4));
-    laptopMasterKpOutputCharacteristic.writeValue(String(kp_et/100.0, 1));
-    laptopMasterKiOutputCharacteristic.writeValue(String(ki_et/100.0, 1));
-    laptopMasterKdOutputCharacteristic.writeValue(String(kd_et/100.0, 1));
+    laptopMasterKpOutputCharacteristic.writeValue(String(kp_et/100.0, 4));
+    laptopMasterKiOutputCharacteristic.writeValue(String(ki_et/100.0, 4));
+    laptopMasterKdOutputCharacteristic.writeValue(String(kd_et/100.0, 4));
 
 }
 
@@ -344,22 +354,22 @@ void controlWheelMotors(float LEFT_MOTOR_PWM_SPEED, float LEFT_MOTOR_DIR, float 
   if(LEFT_MOTOR_DIR == 0)
   {
     pwmA2.write(LEFT_MOTOR_PWM_SPEED + LEFT_FORWARD_OFFSET);
-    pwmA3.write(0.55);
+    pwmA3.write(0);
   }
   else if(LEFT_MOTOR_DIR == 1)
   {
-    pwmA2.write(0.55);
+    pwmA2.write(0);
     pwmA3.write(LEFT_MOTOR_PWM_SPEED + LEFT_BACKWARD_OFFSET);
   }
 
   if(RIGHT_MOTOR_DIR == 0)
   {
     pwmA0.write(RIGHT_MOTOR_PWM_SPEED + RIGHT_FORWARD_OFFSET);
-    pwmA1.write(0.55);
+    pwmA1.write(0);
   }
   else if(RIGHT_MOTOR_DIR == 1)
   {
-    pwmA0.write(0.55);
+    pwmA0.write(0);
     pwmA1.write(RIGHT_MOTOR_PWM_SPEED + RIGHT_BACKWARD_OFFSET);
   }
 }

@@ -15,9 +15,9 @@ laptop_master_service_uuid = "00000000-5EC4-4083-81CD-A10B8D5CF6EC"
 laptop_master_characteristic_angle_uuid = "00000001-5EC4-4083-81CD-A10B8D5CF6EC"
 laptop_master_send_characteristic_uuid = "00000002-5EC4-4083-81CD-A10B8D5CF6EC"
 laptop_master_characteristic_pidoutput_uuid = "00000003-5EC4-4083-81CD-A10B8D5CF6EC"
-laptop_master_characteristic_kpoutput_uuid = "00000003-5EC4-4083-81CD-A10B8D5CF6EC"
-laptop_master_characteristic_kioutput_uuid = "00000004-5EC4-4083-81CD-A10B8D5CF6EC"
-laptop_master_characteristic_kdoutput_uuid = "00000005-5EC4-4083-81CD-A10B8D5CF6EC"
+laptop_master_characteristic_kpoutput_uuid = "00000004-5EC4-4083-81CD-A10B8D5CF6EC"
+laptop_master_characteristic_kioutput_uuid = "00000005-5EC4-4083-81CD-A10B8D5CF6EC"
+laptop_master_characteristic_kdoutput_uuid = "00000006-5EC4-4083-81CD-A10B8D5CF6EC"
 
 
 
@@ -33,10 +33,15 @@ Kp = 0
 Ki = 0
 Kd = 0
 
-LMF = 0.830
-LMB = 0.640
-RMF = 0.830
-RMB = 0.645
+#LMF = 0.830
+#LMB = 0.640
+#RMF = 0.830
+#RMB = 0.645
+
+LMF = 0
+LMB = 0
+RMF = 0
+RMB = 0
 
 # Throttle BLE messages
 last_sent_time = 0
@@ -56,7 +61,7 @@ def send_ble_command():
     if current_time - last_sent_time >= send_interval:
         last_sent_time = current_time
         if client and ble_loop:
-            command = f"Kp:{Kp:.2f} Ki:{Ki:.2f} Kd:{Kd:.2f} RI:{1} LMF:{LMF:.3f} LMB:{LMB:.3f} RMF:{RMF:.3f} RMB:{RMB:.3f}"
+            command = f"Kp:{Kp:.2f} Ki:{Ki:.2f} Kd:{Kd:.2f} RI:{1} {LMF:.3f} {LMB:.3f} {RMF:.3f} {RMB:.3f}"
             test_str_bytes = bytearray(command, encoding="utf-8")
             asyncio.run_coroutine_threadsafe(
                 client.write_gatt_char(laptop_master_send_characteristic_uuid, test_str_bytes, response=True),

@@ -12,7 +12,6 @@ void loop() {
     Serial.print("Angle: ");
     Serial.print(angle);
     Serial.println("°");
-    delay(100);
 }
 
 float getAS5600Angle() {
