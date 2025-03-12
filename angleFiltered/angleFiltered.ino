@@ -9,7 +9,7 @@ float Theta_Acc = 0;
 // Filtered Values
 float Theta_Final = 0;
 float Theta_Bad = 0;
-float k = 0.6; // Initial weight
+float k = 0.9; // Initial weight
 float gx_0, gy_0, gz_0, ax_0, ay_0, az_0;
 
 // Kalman filter variables
@@ -39,7 +39,7 @@ void loop() {
         }
         else
         {
-          0.7;
+          k = 0.9;
         }
 
         Theta_Acc = atan(ax_0 / az_0) * 180 / 3.14159;
