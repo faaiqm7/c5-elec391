@@ -1,6 +1,10 @@
 #include "Arduino_BMI270_BMM150.h"
 #include <ArduinoBLE.h>
 #include "mbed.h"
+#include <SimpleKalmanFilter.h>
+
+
+SimpleKalmanFilter kf(1, 1, 0.01);
 
 //WHEEL MOTOR PINS
 #define RIGHT_MOTOR_FORWARD_PIN  A0
@@ -62,6 +66,16 @@ float gxbias,gybias,gzbias;
 float accel_magnitude;
 float threshold = 0.04;
 
+// Kalman filter variables
+float P[2][2] = {{1, 0}, {0, 1}};  // Error covariance matrix
+float K[2];  // Kalman gain
+float S;  // Innovation (or residual) covariance
+float P00_temp, P01_temp, P10_temp, P11_temp;  // Temporary variables for calculations
+float Q = 0.1; // Process noise covariance (gyro uncertainty)
+float R = 0.5;   
+double y;
+
+
 void setup() {
   initializeAll();
 }
@@ -82,7 +96,7 @@ void loop() {
   t3 = micros();
   if(start == 1)
   {
-    Serial.println(t3-t2);
+    //Serial.println(t3-t2);
   }
 }
 
@@ -161,8 +175,9 @@ void readIMUData() {
     dt = (t1 - t0) / 1000000.0;
     t0 = t1;
 
-    Theta_Acc = atan(ax_0 / az_0) * 180 / 3.14159;
+    Theta_Acc = atan(ax_0 / (az_0/1.01) )* 180 / 3.14159;
     Theta_Gyro = gy_0 *dt + Theta_Final;
+
     if(start == 1)
     {
       Theta_Final = (Theta_Gyro);
@@ -170,8 +185,9 @@ void readIMUData() {
     }
     else
     {
-      Theta_Final = (Theta_Gyro)*k2 + Theta_Acc * (1 - k2);
-      //SerialPrintFunctions();
+      // Theta_Final = (Theta_Gyro)*k2 + Theta_Acc * (1 - k2);
+      Theta_Final = kf.updateEstimate(Theta_Acc);
+  
     }
   }
 }
@@ -239,24 +255,24 @@ void controlWheelMotors(float LEFT_MOTOR_PWM_SPEED, float LEFT_MOTOR_DIR, float 
 {
   if(LEFT_MOTOR_DIR == 0)
   {
-    pwmA2.write(LEFT_MOTOR_PWM_SPEED + LEFT_FORWARD_OFFSET);
-    pwmA3.write(0);
+    pwmA2.write(1.0);
+    pwmA3.write(1.0 - (LEFT_MOTOR_PWM_SPEED + LEFT_FORWARD_OFFSET));
   }
   else if(LEFT_MOTOR_DIR == 1)
   {
-    pwmA2.write(0);
-    pwmA3.write(LEFT_MOTOR_PWM_SPEED + LEFT_BACKWARD_OFFSET);
+    pwmA2.write(1.0 - (LEFT_MOTOR_PWM_SPEED + LEFT_BACKWARD_OFFSET));
+    pwmA3.write(1.0);
   }
 
   if(RIGHT_MOTOR_DIR == 0)
   {
-    pwmA0.write(RIGHT_MOTOR_PWM_SPEED + RIGHT_FORWARD_OFFSET);
-    pwmA1.write(0);
+    pwmA0.write(1.0);
+    pwmA1.write(1.0 - (RIGHT_MOTOR_PWM_SPEED + RIGHT_FORWARD_OFFSET));
   }
   else if(RIGHT_MOTOR_DIR == 1)
   {
-    pwmA0.write(0);
-    pwmA1.write(RIGHT_MOTOR_PWM_SPEED + RIGHT_BACKWARD_OFFSET);
+    pwmA0.write(1.0 - (RIGHT_MOTOR_PWM_SPEED + RIGHT_BACKWARD_OFFSET));
+    pwmA1.write(1.0);
   }
 }
 
