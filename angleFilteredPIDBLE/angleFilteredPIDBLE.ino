@@ -48,46 +48,22 @@ BLEService laptopMasterService("00000000-5EC4-4083-81CD-A10B8D5CF6EC");
 
 BLEStringCharacteristic laptopMasterCharacteristic("00000001-5EC4-4083-81CD-A10B8D5CF6EC", BLERead | BLEWrite, BUFFER_SIZE);
 BLEStringCharacteristic laptopMasterReceiveCharacteristic("00000002-5EC4-4083-81CD-A10B8D5CF6EC", BLERead | BLEWrite, BUFFER_SIZE);
-BLEStringCharacteristic laptopMasterPIDOUTPUTCharacteristic("00000003-5EC4-4083-81CD-A10B8D5CF6EC", BLERead | BLEWrite, BUFFER_SIZE);
-BLEStringCharacteristic laptopMasterKpOutputCharacteristic("00000004-5EC4-4083-81CD-A10B8D5CF6EC", BLERead | BLEWrite, BUFFER_SIZE);
-BLEStringCharacteristic laptopMasterKiOutputCharacteristic("00000005-5EC4-4083-81CD-A10B8D5CF6EC", BLERead | BLEWrite, BUFFER_SIZE);
-BLEStringCharacteristic laptopMasterKdOutputCharacteristic("00000006-5EC4-4083-81CD-A10B8D5CF6EC", BLERead | BLEWrite, BUFFER_SIZE);
+// BLEStringCharacteristic laptopMasterPIDOUTPUTCharacteristic("00000003-5EC4-4083-81CD-A10B8D5CF6EC", BLERead | BLEWrite, BUFFER_SIZE);
+// BLEStringCharacteristic laptopMasterKpOutputCharacteristic("00000004-5EC4-4083-81CD-A10B8D5CF6EC", BLERead | BLEWrite, BUFFER_SIZE);
+// BLEStringCharacteristic laptopMasterKiOutputCharacteristic("00000005-5EC4-4083-81CD-A10B8D5CF6EC", BLERead | BLEWrite, BUFFER_SIZE);
+// BLEStringCharacteristic laptopMasterKdOutputCharacteristic("00000006-5EC4-4083-81CD-A10B8D5CF6EC", BLERead | BLEWrite, BUFFER_SIZE);
 
 BLEDevice laptopMaster;
 int Laptop2RobotLength = 0;
 int receiveLength = 0;
 
-
+//IMU Variables
+float gxbias,gybias,gzbias;
+float accel_magnitude;
+float threshold = 0.04;
 
 void setup() {
   initializeAll();
-  if (!BLE.begin()) {
-    Serial.println("* Starting Bluetooth® Low Energy module failed!");
-    while (1)
-      ;
-  }
-
-  BLE.setLocalName("C5-BLE");
-  BLE.setDeviceName("C5-BLE");
-  BLE.setAdvertisedService(laptopMasterService);
-
-  laptopMasterService.addCharacteristic(laptopMasterCharacteristic);
-  laptopMasterService.addCharacteristic(laptopMasterReceiveCharacteristic);
-  laptopMasterService.addCharacteristic(laptopMasterPIDOUTPUTCharacteristic);
-  laptopMasterService.addCharacteristic(laptopMasterKpOutputCharacteristic);
-  laptopMasterService.addCharacteristic(laptopMasterKiOutputCharacteristic);
-  laptopMasterService.addCharacteristic(laptopMasterKdOutputCharacteristic);
-  BLE.addService(laptopMasterService);
-
-  BLE.advertise();
-
-  while (true) {
-    laptopMaster = BLE.central();
-    if (laptopMaster) {
-      Serial.println("Connected to MASTER LAPTOP");
-      break;
-    }
-  }
 }
 
 void loop() {
@@ -103,11 +79,11 @@ void loop() {
   readIMUData();
   receiveBLE();
   
-  /*t3 = micros();
+  t3 = micros();
   if(start == 1)
   {
     Serial.println(t3-t2);
-  }*/
+  }
 }
 
 void initializeAll() {
@@ -116,6 +92,9 @@ void initializeAll() {
     while (1)
       ;
   }
+
+  calibrateIMU();
+
   float pwm_frequency = 20000.0;  // 20 kHz
   float pwm_period = 1.0 / pwm_frequency;
   pwmA0.period(pwm_period);
@@ -123,20 +102,67 @@ void initializeAll() {
   pwmA2.period(pwm_period);
   pwmA3.period(pwm_period);
 
-  Theta_Final = 0;
+  if (!BLE.begin()) {
+    Serial.println("* Starting Bluetooth® Low Energy module failed!");
+    while (1)
+      ;
+  }
+
+  BLE.setLocalName("C5-BLE");
+  BLE.setDeviceName("C5-BLE");
+  BLE.setAdvertisedService(laptopMasterService);
+  laptopMasterService.addCharacteristic(laptopMasterCharacteristic);
+  laptopMasterService.addCharacteristic(laptopMasterReceiveCharacteristic);
+  BLE.addService(laptopMasterService);
+
+  BLE.advertise();
+
+  while (true) {
+    laptopMaster = BLE.central();
+    if (laptopMaster) {
+      Serial.println("Connected to MASTER LAPTOP");
+      break;
+    }
+  }
 }
+
+void calibrateIMU()
+{ 
+  int iterations = 0;
+  while(iterations < 1000)
+  {
+    if (IMU.gyroscopeAvailable() && IMU.accelerationAvailable()) {
+      IMU.readGyroscope(gy_0, gx_0, gz_0);
+      IMU.readAcceleration(ay_0, ax_0, az_0);
+
+      gxbias += gx_0;
+      gybias += gy_0;
+      gzbias += gz_0;
+      iterations++;
+    }
+  }
+
+  gxbias /= 1000;
+  gybias /= 1000;
+  gzbias /= 1000;
+}
+
 
 void readIMUData() {
   if (IMU.gyroscopeAvailable() && IMU.accelerationAvailable()) {
     IMU.readGyroscope(gy_0, gx_0, gz_0);
     IMU.readAcceleration(ay_0, ax_0, az_0);
+
+    gx_0 -= gxbias;
+    gy_0 -= gybias;
+    gz_0 -= gzbias;
     
     t1 = micros();
     dt = (t1 - t0) / 1000000.0;
     t0 = t1;
 
     Theta_Acc = atan(ax_0 / az_0) * 180 / 3.14159;
-    Theta_Gyro = gy_0 * 0.01 + Theta_Final;
+    Theta_Gyro = gy_0 *dt + Theta_Final;
     if(start == 1)
     {
       Theta_Final = (Theta_Gyro);
@@ -285,9 +311,9 @@ void receiveBLE()
       }
     }
   }
-  laptopMasterCharacteristic.writeValue(String(Theta_Final, 2));
-  laptopMasterPIDOUTPUTCharacteristic.writeValue(String(PID_OUTPUT, 4));
-  laptopMasterKpOutputCharacteristic.writeValue(String(kp_et/100.0, 4));
-  laptopMasterKiOutputCharacteristic.writeValue(String(ki_et/100.0, 4));
-  laptopMasterKdOutputCharacteristic.writeValue(String(kd_et/100.0, 4));
+  laptopMasterCharacteristic.writeValue(String(Theta_Final, 2) + " " + String(PID_OUTPUT, 2) + " " + String(kp_et/100.0, 2) + " " + String(ki_et/100.0, 2) + " " + String(kd_et/100.0, 2));
+  // laptopMasterPIDOUTPUTCharacteristic.writeValue(String(PID_OUTPUT, 4));
+  // laptopMasterKpOutputCharacteristic.writeValue(String(kp_et/100.0, 4));
+  // laptopMasterKiOutputCharacteristic.writeValue(String(ki_et/100.0, 4));
+  // laptopMasterKdOutputCharacteristic.writeValue(String(kd_et/100.0, 4));
 }

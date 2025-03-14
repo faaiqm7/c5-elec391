@@ -1,7 +1,6 @@
 #include "Arduino_BMI270_BMM150.h"
 #include <Wire.h>
 #include "mbed.h"
-#define AS5600_I2C_ADDR 0x36  // AS5600 I2C address
 
 //WHEEL MOTOR PINS
 #define RIGHT_MOTOR_FORWARD_PIN  A0
@@ -23,10 +22,10 @@ float Theta_Acc = 0;
 float Theta_Final = 0;
 float gx_0, gy_0, gz_0, ax_0, ay_0, az_0;
 
-float k2 = 0.6;
+float k2 = 0.99;
 int start = 0; //if start == 1 (START!!)
 
-//PID VARIABLES
+
 //PID Variables
 float et_old,et_new, kp_et,ki_et,kd_et,et_integral, et_derivative;
 float kp = 0; //Proportional
@@ -38,6 +37,20 @@ float pi = 3.1415;
 int resetIntegral = 0;
 float t0, t1, dt;
 
+//IMU Variables
+float gxbias,gybias,gzbias;
+float accel_magnitude;
+float threshold = 0.04;
+
+// Kalman filter variables
+float P[2][2] = {{1, 0}, {0, 1}};  // Error covariance matrix
+float K[2];  // Kalman gain
+float S;  // Innovation (or residual) covariance
+float P00_temp, P01_temp, P10_temp, P11_temp;  // Temporary variables for calculations
+float Q = 0.001; // Process noise covariance (gyro uncertainty)
+float R = 0.1;   
+double y;
+
 void setup() {
   initializeAll();
 }
@@ -48,15 +61,18 @@ void loop() {
   {
     String input = Serial.readString();
 
-    start = input.substring(0, input.indexOf(' ')).toDouble();
-    input = input.substring(input.indexOf(' ') + 1);
-    kp = input.substring(0, input.indexOf(' ')).toDouble();
-    input = input.substring(input.indexOf(' ') + 1);
-    ki = input.substring(0, input.indexOf(' ')).toDouble();
-    input = input.substring(input.indexOf(' ') + 1);
-    kd = input.substring(0, input.indexOf(' ')).toDouble();
-    input = input.substring(input.indexOf(' ') + 1);
-    resetIntegral = input.substring(0, input.indexOf(' ')).toInt();
+    threshold = input.substring(0, input.indexOf(' ')).toDouble();
+    Theta_Final = 0;
+
+    // start = input.substring(0, input.indexOf(' ')).toDouble();
+    // input = input.substring(input.indexOf(' ') + 1);
+    // kp = input.substring(0, input.indexOf(' ')).toDouble();
+    // input = input.substring(input.indexOf(' ') + 1);
+    // ki = input.substring(0, input.indexOf(' ')).toDouble();
+    // input = input.substring(input.indexOf(' ') + 1);
+    // kd = input.substring(0, input.indexOf(' ')).toDouble();
+    // input = input.substring(input.indexOf(' ') + 1);
+    // resetIntegral = input.substring(0, input.indexOf(' ')).toInt();
 
   }
   if(resetIntegral == 1)
@@ -84,12 +100,45 @@ void initializeAll() {
   pwmA1.period(pwm_period);
   pwmA2.period(pwm_period);
   pwmA3.period(pwm_period);
+
+  pwmA0.write(0);
+  pwmA1.write(0);
+  pwmA2.write(0);
+  pwmA3.write(0);
+
+  calibrateIMU();
+}
+
+void calibrateIMU()
+{ 
+  int iterations = 0;
+  while(iterations < 1000)
+  {
+    if (IMU.gyroscopeAvailable() && IMU.accelerationAvailable()) {
+      IMU.readGyroscope(gy_0, gx_0, gz_0);
+      IMU.readAcceleration(ay_0, ax_0, az_0);
+
+      gxbias += gx_0;
+      gybias += gy_0;
+      gzbias += gz_0;
+      iterations++;
+    }
+  }
+
+  gxbias /= 1000;
+  gybias /= 1000;
+  gzbias /= 1000;
 }
 
 void readIMUData() {
   if (IMU.gyroscopeAvailable() && IMU.accelerationAvailable()) {
     IMU.readGyroscope(gy_0, gx_0, gz_0);
     IMU.readAcceleration(ay_0, ax_0, az_0);
+
+    gx_0 -= gxbias;
+    gy_0 -= gybias;
+    gz_0 -= gzbias;
+    
     
     t1 = micros();
     dt = (t1 - t0) / 1000000.0;
@@ -104,7 +153,17 @@ void readIMUData() {
     }
     else
     {
+      accel_magnitude = abs(sqrt(pow(ax_0,2)+pow(az_0,2)) - 1);
+      if(accel_magnitude > threshold)
+      {
+        k2 = 1;
+      }
+      else
+      {
+        k2 = 0.995;
+      }
       Theta_Final = (Theta_Gyro)*k2 + Theta_Acc * (1 - k2);
+      //kalmanFilter();
       SerialPrintFunctions();
     }
   }
@@ -112,7 +171,19 @@ void readIMUData() {
 
 void SerialPrintFunctions()
 {
-  Serial.println(Theta_Final);
+  Serial.print(10);
+  Serial.print(" ");
+  Serial.print(Theta_Final);
+  Serial.print(" ");
+  Serial.print(ax_0);
+  Serial.print(" ");
+  Serial.print(ay_0);
+  Serial.print(" ");
+  Serial.print(az_0);
+  Serial.print(" ");
+  Serial.print(accel_magnitude);
+  Serial.print(" ");
+  Serial.println(-10);
 }
 
 void PID()
@@ -193,4 +264,33 @@ void controlWheelMotors(float LEFT_MOTOR_PWM_SPEED, float LEFT_MOTOR_DIR, float 
     pwmA0.write(0);
     pwmA1.write(RIGHT_MOTOR_PWM_SPEED);
   }
+}
+
+void kalmanFilter()
+{
+  // Kalman Filter Update (combining the accelerometer and gyroscope angles)
+    // Prediction Step
+    P00_temp = P[0][0] + dt * (dt * P[1][1] - P[0][1] - P[1][0] + Q);
+    P01_temp = P[0][1] - dt * P[1][1];
+    P10_temp = P[1][0] - dt * P[1][1];
+    P11_temp = P[1][1] + Q;
+
+    // Measurement Update
+    S = P00_temp + R;  // Innovation (or residual) covariance
+    K[0] = P00_temp / S;  // Kalman gain for the angle
+    K[1] = P10_temp / S;  // Kalman gain for the rate
+
+    // Compute the new angle estimate
+    y = Theta_Acc - Theta_Gyro;  // Residual (difference between the accelerometer and gyroscope)
+    Theta_Gyro += K[0] * y;
+    
+    // Update error covariance matrix
+    P[0][0] = P00_temp - K[0] * P00_temp;
+    P[0][1] = P01_temp - K[0] * P01_temp;
+    P[1][0] = P10_temp - K[1] * P00_temp;
+    P[1][1] = P11_temp - K[1] * P01_temp;
+
+    // The final angle estimate after the Kalman filter update
+    Theta_Final = Theta_Gyro;
+
 }

@@ -12,7 +12,7 @@ import io
 
 # Define the BLE UUIDs
 laptop_master_service_uuid = "00000000-5EC4-4083-81CD-A10B8D5CF6EC"
-laptop_master_characteristic_angle_uuid = "00000001-5EC4-4083-81CD-A10B8D5CF6EC"
+laptop_master_characteristic_data_receive_uuid = "00000001-5EC4-4083-81CD-A10B8D5CF6EC"
 laptop_master_send_characteristic_uuid = "00000002-5EC4-4083-81CD-A10B8D5CF6EC"
 laptop_master_characteristic_pidoutput_uuid = "00000003-5EC4-4083-81CD-A10B8D5CF6EC"
 laptop_master_characteristic_kpoutput_uuid = "00000004-5EC4-4083-81CD-A10B8D5CF6EC"
@@ -54,6 +54,9 @@ KpOuts = []
 KiOuts = []
 KdOuts = []
 time_stamps = []  # List to store time of each angle reading
+
+data_per_second = 0
+t0 = 0
 
 def send_ble_command():
     global last_sent_time
@@ -154,16 +157,24 @@ async def run_ble():
         print(f"Connected to {arduino_device_name}\n")
         while True:
             try:
-                angleReceived = await client.read_gatt_char(laptop_master_characteristic_angle_uuid)
-                angleReceived = angleReceived.decode('utf-8')
-                pidOutput = await client.read_gatt_char(laptop_master_characteristic_pidoutput_uuid)
-                pidOutput = pidOutput.decode('utf-8')
-                KpReceived = await client.read_gatt_char(laptop_master_characteristic_kpoutput_uuid)
-                KpReceived = KpReceived.decode('utf-8')
-                KiReceived = await client.read_gatt_char(laptop_master_characteristic_kioutput_uuid)
-                KiReceived = KiReceived.decode('utf-8')
-                KdReceived = await client.read_gatt_char(laptop_master_characteristic_kdoutput_uuid)
-                KdReceived = KdReceived.decode('utf-8')
+                
+                dataReceived = await client.read_gatt_char(laptop_master_characteristic_data_receive_uuid)
+                dataReceived = dataReceived.decode('utf-8').strip()
+
+                angleReceivedStr, PIDOutputStr, KpOutputStr, KiOutputStr, KdOutputStr = dataReceived.split(" ")
+                angleReceived = float(angleReceivedStr)
+                pidOutput = float(PIDOutputStr)
+                KpReceived = float(KpOutputStr)
+                KiReceived = float(KiOutputStr)
+                KdReceived = float(KdOutputStr)
+                # pidOutput = await client.read_gatt_char(laptop_master_characteristic_pidoutput_uuid)
+                # pidOutput = pidOutput.decode('utf-8')
+                # KpReceived = await client.read_gatt_char(laptop_master_characteristic_kpoutput_uuid)
+                # KpReceived = KpReceived.decode('utf-8')
+                # KiReceived = await client.read_gatt_char(laptop_master_characteristic_kioutput_uuid)
+                # KiReceived = KiReceived.decode('utf-8')
+                # KdReceived = await client.read_gatt_char(laptop_master_characteristic_kdoutput_uuid)
+                # KdReceived = KdReceived.decode('utf-8')
                 #print(f"Tilt: {angleReceived}° PID Output: {pidOutput}")
                 # print(f"Tilt: {angleReceived}°")
 
@@ -199,7 +210,7 @@ async def run_ble():
                 update_kioutput_label()
                 update_kdoutput_label()
 
-                await asyncio.sleep(0.01)
+                await asyncio.sleep(0.0001)
             except Exception as e:
                 print(f"Error: {e}")
                 break
@@ -431,7 +442,7 @@ angle_frame.place(relx=0.08, rely=0.5, anchor="center")
 angle_label = ctk.CTkLabel(angle_frame, text="Angle: 0°", font=("Roboto", 24))
 angle_label.place(relx=0.5, rely=0.5, anchor="center")  # Center the label inside the frame
 
-# Create a white background frame for the pidoutput label
+#Create a white background frame for the pidoutput label
 pidoutput_frame = ctk.CTkFrame(root, width=240, height=50, fg_color="white", border_width=2, border_color="#9A0000")
 pidoutput_frame.place(relx=0.3, rely=0.29, anchor="center")
 
