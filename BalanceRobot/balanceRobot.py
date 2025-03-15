@@ -38,10 +38,10 @@ Kd = 0
 #RMF = 0.830
 #RMB = 0.645
 
-LMF = 0
-LMB = 0
-RMF = 0
-RMB = 0
+LMF = 0.03
+LMB = 0.03
+RMF = 0.03  
+RMB = 0.03
 
 # Throttle BLE messages
 last_sent_time = 0
@@ -70,19 +70,19 @@ def send_ble_command():
                 client.write_gatt_char(laptop_master_send_characteristic_uuid, test_str_bytes, response=True),
                 ble_loop
             )
-            print(f"{command}")
+            print(f"Kp:{Kp:.4f} Ki:{Ki:.4f} Kd:{Kd:.4f} RI:{1} {LMF:.3f} {LMB:.3f} {RMF:.3f} {RMB:.3f}")
 
 def on_press(key):
     global Kp, Ki, Kd, LMF, LMB, RMF, RMB
     try:
         if key.char == 'q':
-            Kp += 0.1
+            Kp += 0.01
         elif key.char == 'a':
-            Kp -= 0.1
+            Kp -= 0.01
         elif key.char == 'w':
-            Ki += 0.05
+            Ki += 0.005
         elif key.char == 's':
-            Ki -= 0.05
+            Ki -= 0.005
         elif key.char == 'e':
             Kd += 0.005
         elif key.char == 'd':

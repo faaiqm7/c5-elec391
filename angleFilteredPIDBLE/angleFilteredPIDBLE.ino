@@ -26,7 +26,7 @@ float Theta_Acc = 0;
 float Theta_Final = 0;
 float gx_0, gy_0, gz_0, ax_0, ay_0, az_0;
 
-float k2 = 0.6;
+float k2 = 0.99;
 int start = 0; //if start == 1 (START!!)
 
 //PID Variables
@@ -38,7 +38,7 @@ float desired_angle = 0; //We always want the robot to be at a 0 degree pitch (a
 float PID_OUTPUT = 0; //number between 0 - 100
 float pi = 3.1415;
 int resetIntegral = 0;
-float t0, t1, dt, t2, t3;
+float t0, t1, dt, t2, t3, t4;
 
 float LEFT_FORWARD_OFFSET;
 float LEFT_BACKWARD_OFFSET;
@@ -116,6 +116,11 @@ void initializeAll() {
   pwmA2.period(pwm_period);
   pwmA3.period(pwm_period);
 
+  pwmA0.write(1.0);
+  pwmA1.write(1.0);
+  pwmA2.write(1.0);
+  pwmA3.write(1.0);
+
   if (!BLE.begin()) {
     Serial.println("* Starting Bluetooth® Low Energy module failed!");
     while (1)
@@ -149,9 +154,9 @@ void calibrateIMU()
       IMU.readGyroscope(gy_0, gx_0, gz_0);
       IMU.readAcceleration(ay_0, ax_0, az_0);
 
-      gxbias += gx_0;
-      gybias += gy_0;
-      gzbias += gz_0;
+      gxbias += abs(gx_0);
+      gybias += abs(gy_0);
+      gzbias += abs(gz_0);
       iterations++;
     }
   }
@@ -167,34 +172,84 @@ void readIMUData() {
     IMU.readGyroscope(gy_0, gx_0, gz_0);
     IMU.readAcceleration(ay_0, ax_0, az_0);
 
-    gx_0 -= gxbias;
-    gy_0 -= gybias;
-    gz_0 -= gzbias;
+    if(gx_0 > 0)
+    {
+      gx_0 -= gxbias*1.05;
+    }
+    else
+    {
+      gx_0 += gxbias*1.05;
+    }
+    if(gy_0 > 0)
+    {
+      gy_0 -= gybias*1.05;
+    }
+    else
+    {
+      gy_0 += gybias*1.05;
+    }
+    if(gz_0 > 0)
+    {
+      gz_0 -= gzbias*1.05;
+    }
+    else
+    {
+      gz_0 += gzbias*1.05;
+    }
     
     t1 = micros();
     dt = (t1 - t0) / 1000000.0;
     t0 = t1;
 
-    Theta_Acc = atan(ax_0 / (az_0/1.01) )* 180 / 3.14159;
+    Theta_Acc = atan(ax_0 /az_0 )* 180 / 3.14159;
     Theta_Gyro = gy_0 *dt + Theta_Final;
 
     if(start == 1)
     {
-      Theta_Final = (Theta_Gyro);
+      accel_magnitude = sqrt(pow(ax_0/1.01, 2) + pow(ay_0/1.01, 2) + pow(az_0/1.01, 2));
+      if(abs(accel_magnitude - 1) <= 0.004 && abs(ax_0) <= 0.005)
+      {
+        Theta_Final = Theta_Acc;
+      }
+      else
+      {
+        Theta_Final = (Theta_Gyro);
+      }
       PID();
     }
     else
     {
       // Theta_Final = (Theta_Gyro)*k2 + Theta_Acc * (1 - k2);
-      Theta_Final = kf.updateEstimate(Theta_Acc);
-  
+      accel_magnitude = sqrt(pow(ax_0/1.01, 2) + pow(ay_0/1.01, 2) + pow(az_0/1.01, 2));
+      if(abs(accel_magnitude - 1) <= 0.004 && abs(ax_0) <= 0.005)
+      {
+        Theta_Final = Theta_Acc;
+        Serial.print(abs(accel_magnitude - 1), 6);
+        Serial.print(" ");
+        Serial.print(abs(ax_0), 6);
+        Serial.print(" ");
+        Serial.println("ACC");
+      }
+      else
+      {
+        Theta_Final = (Theta_Gyro);
+      //   Serial.print(abs(accel_magnitude - 1), 6);
+      //   Serial.print(" ");
+      //   Serial.println("GYRO");
+      // }
+      //Serial.println(abs(accel_magnitude - 1), 6);
+      }
     }
   }
 }
 
 void SerialPrintFunctions()
 {
-  Serial.println(Theta_Final);
+  Serial.print(-25);
+  Serial.print(" ");
+  Serial.print(Theta_Final);
+  Serial.print(" ");
+  Serial.println(25);
 }
 
 void PID()
@@ -228,17 +283,24 @@ void PID()
     Serial.print(" ");
     Serial.println(PID_OUTPUT);*/
 
-    if(PID_OUTPUT >= 0.00)
+    if(PID_OUTPUT >= 0.00 && abs(Theta_Final) >= 0.5)
     {
       //PID_OUTPUT /= 1000.0;
       //PID_OUT will be negative (mostly)
       controlWheelMotors(abs(PID_OUTPUT), 0, abs(PID_OUTPUT), 0);
     }
-    else if(PID_OUTPUT <= 0.00)
+    else if(PID_OUTPUT <= 0.00 && abs(Theta_Final) >= 0.5)
     {
       //PID_OUTPUT /= 1000.0;
       //Theta < 0, PID_OUT will be positive (mostly)
       controlWheelMotors(abs(PID_OUTPUT), 1, abs(PID_OUTPUT), 1);
+    }
+    else
+    {
+      pwmA0.write(1.0);
+      pwmA1.write(1.0);
+      pwmA2.write(1.0);
+      pwmA3.write(1.0);
     }
 
     et_old = et_new;
